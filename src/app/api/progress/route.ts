@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const prompt = buildProgressReviewPrompt(profile as unknown as ProfileType, entries as any[])
       const completion = await openaiClient.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'google/gemini-2.5-flash-lite',
         messages: [
           { role: 'system', content: 'შენ ხარ AI პირადი ტრენერი. პასუხობ ქართულად.' },
           { role: 'user', content: prompt },

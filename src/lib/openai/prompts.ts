@@ -129,6 +129,50 @@ ${profile.conditions?.length ? `შეზღუდვები: ${profile.condit
 }`
 }
 
+export function buildFoodLookupPrompt(foodName: string, amountG?: number): string {
+  return `შეძებე ეს საკვები და მიეცი კვებითი ინფორმაცია:
+საკვები: "${foodName}"${amountG ? `\nრაოდენობა: ${amountG}გ` : '\nრაოდენობა: 100გ'}
+
+დააბრუნე მხოლოდ JSON:
+{
+  "food_name": "ზუსტი სახელი ქართულად",
+  "amount_g": 100,
+  "calories": 150,
+  "protein_g": 10.5,
+  "fat_g": 5.2,
+  "carbs_g": 18.0,
+  "found": true
+}
+
+თუ ვერ ცნე საკვები: "found": false, დანარჩენი 0.`
+}
+
+export function buildNutritionAnalysisPrompt(
+  profile: Profile,
+  entries: { food_name: string; calories: number; protein_g: number; fat_g: number; carbs_g: number; meal_type: string }[],
+): string {
+  const totals = entries.reduce((a, e) => ({
+    cal: a.cal + (e.calories || 0),
+    prot: a.prot + (e.protein_g || 0),
+    fat: a.fat + (e.fat_g || 0),
+    carbs: a.carbs + (e.carbs_g || 0),
+  }), { cal: 0, prot: 0, fat: 0, carbs: 0 })
+
+  return `გააანალიზე ${profile.name}-ის დღევანდელი კვება:
+
+მიზანი: კალორია ${profile.calorie_goal}კკალ | ცილა ${profile.protein_g}გ | ცხიმი ${profile.fat_g}გ | ნახ ${profile.carbs_g}გ
+
+შეჭამა:
+${entries.map(e => `- ${e.meal_type}: ${e.food_name} (${Math.round(e.calories)}კკალ)`).join('\n')}
+
+სულ: ${Math.round(totals.cal)}კკალ | ცილა:${Math.round(totals.prot)}გ | ცხიმი:${Math.round(totals.fat)}გ | ნახ:${Math.round(totals.carbs)}გ
+
+მიეცი მოკლე ანალიზი (3-5 წინადადება) ქართულად:
+1. რა კარგად გაკეთდა
+2. სად არის ხარვეზი (ნაკლები ცილა? ზედმეტი ნახ?)
+3. 1-2 კონკრეტური რეკომენდაცია დარჩენილი დღისთვის`
+}
+
 export function buildProgressReviewPrompt(
   profile: Profile,
   entries: { date: string; weight_kg?: number }[]

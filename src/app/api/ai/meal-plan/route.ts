@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
   try {
     const prompt = buildMealPlanPrompt(profile as unknown as ProfileType, days)
     const completion = await openaiClient.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'google/gemini-2.5-flash-lite',
       messages: [
         { role: 'system', content: 'შენ ხარ კვების სპეციალისტი. პასუხობ მხოლოდ ვალიდური JSON ფორმატით.' },
         { role: 'user', content: prompt },

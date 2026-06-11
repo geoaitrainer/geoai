@@ -1,7 +1,16 @@
 import { auth } from '@/auth'
 import { NextRequest } from 'next/server'
 import { streamText } from 'ai'
-import { openai } from '@ai-sdk/openai'
+import { createOpenAI } from '@ai-sdk/openai'
+
+const openrouter = createOpenAI({
+  baseURL: 'https://openrouter.ai/api/v1',
+  apiKey: process.env.OPENROUTER_API_KEY,
+  headers: {
+    'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+    'X-Title': 'AI Trainer',
+  },
+})
 import { connectDB } from '@/lib/mongodb/mongoose'
 import { Profile } from '@/lib/mongodb/models/Profile'
 import { MealPlan } from '@/lib/mongodb/models/MealPlan'
@@ -46,7 +55,7 @@ export async function POST(request: NextRequest) {
   ChatMessage.create({ userId, role: 'user', content: lastMessage }).catch(() => {})
 
   const result = streamText({
-    model: openai('gpt-4o'),
+    model: openrouter('google/gemini-2.5-flash-lite'),
     system: systemPrompt,
     messages: messages.slice(-10),
     maxOutputTokens: 1000,

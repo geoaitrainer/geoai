@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   try {
     const prompt = buildWorkoutPlanPrompt(profile as unknown as ProfileType, type)
     const completion = await openaiClient.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'google/gemini-2.5-flash-lite',
       messages: [
         { role: 'system', content: 'შენ ხარ პერსონალური ტრენერი. პასუხობ JSON ფორმატით.' },
         { role: 'user', content: prompt },

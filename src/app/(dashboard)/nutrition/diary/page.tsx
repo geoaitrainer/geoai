@@ -43,6 +43,11 @@ export default function FoodDiaryPage() {
   })
   const [saving, setSaving] = useState(false)
 
+  const [aiSearch, setAiSearch] = useState('')
+  const [aiSearching, setAiSearching] = useState(false)
+  const [analysis, setAnalysis] = useState('')
+  const [analyzing, setAnalyzing] = useState(false)
+
   useEffect(() => {
     loadEntries() // eslint-disable-line react-hooks/exhaustive-deps
   }, [date]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -95,6 +100,43 @@ export default function FoodDiaryPage() {
     await loadEntries()
   }
 
+  async function handleAiSearch(e: React.FormEvent) {
+    e.preventDefault()
+    if (!aiSearch.trim()) return
+    setAiSearching(true)
+    try {
+      const res = await fetch('/api/ai/food-lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ food_name: aiSearch, amount_g: form.amount_g ? parseFloat(form.amount_g) : undefined }),
+      })
+      const data = await res.json()
+      if (data.found !== false) {
+        setForm(prev => ({
+          ...prev,
+          food_name: data.food_name || aiSearch,
+          calories: String(data.calories || ''),
+          protein_g: String(data.protein_g || ''),
+          fat_g: String(data.fat_g || ''),
+          carbs_g: String(data.carbs_g || ''),
+        }))
+        setAiSearch('')
+      }
+    } catch {}
+    setAiSearching(false)
+  }
+
+  async function handleAnalyze() {
+    setAnalyzing(true)
+    setAnalysis('')
+    try {
+      const res = await fetch(`/api/ai/nutrition-analysis?date=${date}`)
+      const data = await res.json()
+      setAnalysis(data.analysis || '')
+    } catch {}
+    setAnalyzing(false)
+  }
+
   const totals = entries.reduce((acc, e) => ({
     calories: acc.calories + (e.calories || 0),
     protein_g: acc.protein_g + (e.protein_g || 0),
@@ -130,16 +172,46 @@ export default function FoodDiaryPage() {
           </div>
         </div>
 
-        {/* Add food button */}
-        <Button onClick={() => setShowForm(!showForm)}>
-          {showForm ? '✕ გაუქმება' : '➕ საკვების დამატება'}
-        </Button>
+        {/* Add food + AI analyze */}
+        <div className="flex gap-3 flex-wrap">
+          <Button onClick={() => setShowForm(!showForm)}>
+            {showForm ? '✕ გაუქმება' : '➕ საკვების დამატება'}
+          </Button>
+          <Button onClick={handleAnalyze} disabled={analyzing} className="btn-secondary">
+            {analyzing ? '⏳ ვაანალიზებ...' : '🤖 AI ანალიზი'}
+          </Button>
+        </div>
+
+        {analysis && (
+          <div className="card p-4 border-l-4 border-primary-500 bg-primary-50 dark:bg-primary-900/20">
+            <p className="text-xs font-semibold text-primary-600 dark:text-primary-400 mb-2">🤖 AI კვების ანალიზი</p>
+            <p className="text-sm text-[var(--foreground)] leading-relaxed whitespace-pre-wrap">{analysis}</p>
+          </div>
+        )}
 
         {/* Add form */}
         {showForm && (
           <Card className="animate-slide-up">
             <CardHeader><CardTitle>საკვების დამატება</CardTitle></CardHeader>
             <CardContent>
+              {/* AI food search */}
+              <div className="mb-4">
+                <p className="text-xs text-[var(--muted-foreground)] mb-2">🤖 AI საკვების ძიება:</p>
+                <form onSubmit={handleAiSearch} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={aiSearch}
+                    onChange={e => setAiSearch(e.target.value)}
+                    placeholder="მაგ: ხინკალი 3 ცალი, ბასტურმა 50გ..."
+                    className="input-field flex-1 text-sm"
+                  />
+                  <button type="submit" disabled={aiSearching}
+                    className="btn-primary px-3 py-2 text-xs whitespace-nowrap">
+                    {aiSearching ? '⏳' : '🔍 ძიება'}
+                  </button>
+                </form>
+              </div>
+
               {/* Quick select */}
               <div className="mb-4">
                 <p className="text-xs text-[var(--muted-foreground)] mb-2">სწრაფი არჩევა:</p>

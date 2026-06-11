@@ -8,6 +8,7 @@ const nextConfig = {
   },
   experimental: {
     serverComponentsExternalPackages: ['openai'],
+    instrumentationHook: true,
   },
 }
 
