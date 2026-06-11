@@ -1,26 +1,25 @@
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { openaiClient } from '@/lib/openai/client'
 import { buildWorkoutPlanPrompt } from '@/lib/openai/prompts'
-import type { Profile } from '@/types/profile'
+import { connectDB } from '@/lib/mongodb/mongoose'
+import { Profile } from '@/lib/mongodb/models/Profile'
+import { WorkoutProgram } from '@/lib/mongodb/models/WorkoutProgram'
+import type { Profile as ProfileType } from '@/types/profile'
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await auth()
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { type } = await request.json()
 
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-
-  if (error || !profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+  await connectDB()
+  const userId = session.user.id
+  const profile = await Profile.findOne({ userId }).lean()
+  if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
 
   try {
-    const prompt = buildWorkoutPlanPrompt(profile as Profile, type)
+    const prompt = buildWorkoutPlanPrompt(profile as unknown as ProfileType, type)
     const completion = await openaiClient.chat.completions.create({
       model: 'gpt-4o',
       messages: [
@@ -36,26 +35,16 @@ export async function POST(request: NextRequest) {
 
     const programData = JSON.parse(content)
 
-    await supabase
-      .from('workout_programs')
-      .update({ is_active: false })
-      .eq('user_id', user.id)
-      .eq('type', type)
+    await WorkoutProgram.updateMany({ userId, type }, { is_active: false })
+    const saved = await WorkoutProgram.create({
+      userId, type,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      level: (profile as any).experience,
+      content: programData,
+      is_active: true,
+    })
 
-    const { data: saved, error: saveError } = await supabase
-      .from('workout_programs')
-      .insert({
-        user_id: user.id,
-        type,
-        level: profile.experience,
-        content: programData,
-        is_active: true,
-      })
-      .select()
-      .single()
-
-    if (saveError) return NextResponse.json({ error: saveError.message }, { status: 500 })
-    return NextResponse.json(saved)
+    return NextResponse.json(JSON.parse(JSON.stringify(saved)))
   } catch (err) {
     console.error('Workout plan error:', err)
     return NextResponse.json({ error: 'Generation failed' }, { status: 500 })
@@ -63,17 +52,13 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await auth()
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data } = await supabase
-    .from('workout_programs')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .order('created_at', { ascending: false })
-    .limit(1)
+  await connectDB()
+  const program = await WorkoutProgram.findOne({ userId: session.user.id, is_active: true })
+    .sort({ createdAt: -1 })
+    .lean()
 
-  return NextResponse.json(data?.[0] || null)
+  return NextResponse.json(program ? JSON.parse(JSON.stringify(program)) : null)
 }

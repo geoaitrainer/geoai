@@ -1,21 +1,19 @@
-import { createClient } from '@/lib/supabase/server'
+import { connectDB } from '@/lib/mongodb/mongoose'
+import { Profile } from '@/lib/mongodb/models/Profile'
+import { MealPlan } from '@/lib/mongodb/models/MealPlan'
+import { WorkoutProgram } from '@/lib/mongodb/models/WorkoutProgram'
+import { ChatMessage } from '@/lib/mongodb/models/ChatMessage'
 import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
 
 async function getStats() {
-  const supabase = await createClient()
-  const [
-    { count: totalUsers },
-    { count: proUsers },
-    { count: mealPlans },
-    { count: workoutPrograms },
-    { count: chatMessages },
-  ] = await Promise.all([
-    supabase.from('profiles').select('*', { count: 'exact', head: true }),
-    supabase.from('profiles').select('*', { count: 'exact', head: true }).neq('plan', 'free'),
-    supabase.from('meal_plans').select('*', { count: 'exact', head: true }),
-    supabase.from('workout_programs').select('*', { count: 'exact', head: true }),
-    supabase.from('chat_messages').select('*', { count: 'exact', head: true }),
+  await connectDB()
+  const [totalUsers, proUsers, mealPlans, workoutPrograms, chatMessages] = await Promise.all([
+    Profile.countDocuments(),
+    Profile.countDocuments({ plan: { $ne: 'free' } }),
+    MealPlan.countDocuments(),
+    WorkoutProgram.countDocuments(),
+    ChatMessage.countDocuments(),
   ])
   return { totalUsers, proUsers, mealPlans, workoutPrograms, chatMessages }
 }
@@ -25,16 +23,14 @@ export default async function AdminPage() {
 
   return (
     <div className="space-y-8">
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <StatCard label="სულ მომხმარებელი" value={stats.totalUsers || 0} icon="👥" />
-        <StatCard label="Pro / Premium" value={stats.proUsers || 0} icon="⭐" />
-        <StatCard label="კვების გეგმა" value={stats.mealPlans || 0} icon="🥗" />
-        <StatCard label="ვარჯიშის გეგმა" value={stats.workoutPrograms || 0} icon="💪" />
-        <StatCard label="AI შეტყობინება" value={stats.chatMessages || 0} icon="🤖" />
+        <StatCard label="სულ მომხმარებელი" value={stats.totalUsers} icon="👥" />
+        <StatCard label="Pro / Premium" value={stats.proUsers} icon="⭐" />
+        <StatCard label="კვების გეგმა" value={stats.mealPlans} icon="🥗" />
+        <StatCard label="ვარჯიშის გეგმა" value={stats.workoutPrograms} icon="💪" />
+        <StatCard label="AI შეტყობინება" value={stats.chatMessages} icon="🤖" />
       </div>
 
-      {/* Nav */}
       <div className="grid md:grid-cols-2 gap-4">
         <Link href="/admin/users">
           <Card className="hover:border-primary-500 transition-colors cursor-pointer">

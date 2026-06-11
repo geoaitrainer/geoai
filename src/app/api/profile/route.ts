@@ -1,42 +1,38 @@
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/auth'
 import { NextRequest, NextResponse } from 'next/server'
+import { connectDB } from '@/lib/mongodb/mongoose'
+import { Profile } from '@/lib/mongodb/models/Profile'
 import { calculateBMR } from '@/lib/calculations/bmr'
 import { calculateTDEE } from '@/lib/calculations/tdee'
 import { calculateMacros } from '@/lib/calculations/macros'
-import type { Profile } from '@/types/profile'
+import type { Profile as ProfileType } from '@/types/profile'
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await auth()
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
+  await connectDB()
+  const profile = await Profile.findOne({ userId: session.user.id }).lean()
+  if (!profile) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  if (error) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  return NextResponse.json(data)
+  return NextResponse.json(JSON.parse(JSON.stringify(profile)))
 }
 
 export async function PUT(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await auth()
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
-  const bmr = calculateBMR(body as Profile)
+  const bmr = calculateBMR(body as ProfileType)
   const tdee = calculateTDEE(bmr, body.activity_level)
   const macros = calculateMacros(tdee, body.goal, body.gender)
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .update({ ...body, bmr, tdee, ...macros, updated_at: new Date().toISOString() })
-    .eq('id', user.id)
-    .select()
-    .single()
+  await connectDB()
+  const profile = await Profile.findOneAndUpdate(
+    { userId: session.user.id },
+    { ...body, bmr, tdee, ...macros },
+    { new: true, upsert: true }
+  ).lean()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  return NextResponse.json(JSON.parse(JSON.stringify(profile)))
 }

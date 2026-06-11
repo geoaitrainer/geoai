@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -21,9 +21,8 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
+    const result = await signIn('credentials', { email, password, redirect: false })
+    if (result?.error) {
       setError('ელ-ფოსტა ან პაროლი არასწორია')
     } else {
       router.push('/dashboard')
@@ -34,11 +33,7 @@ export default function LoginPage() {
 
   async function handleGoogle() {
     setGoogleLoading(true)
-    const supabase = createClient()
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
-    })
+    await signIn('google', { callbackUrl: '/dashboard' })
   }
 
   return (

@@ -1,17 +1,15 @@
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
+import { connectDB } from '@/lib/mongodb/mongoose'
+import { Profile } from '@/lib/mongodb/models/Profile'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const session = await auth()
+  if (!session?.user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single()
-
+  await connectDB()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const profile = await Profile.findOne({ userId: session.user.id }).lean() as any
   if (!profile?.is_admin) redirect('/dashboard')
 
   return (

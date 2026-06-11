@@ -1,40 +1,34 @@
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/auth'
 import { NextResponse } from 'next/server'
+import { connectDB } from '@/lib/mongodb/mongoose'
+import { Profile } from '@/lib/mongodb/models/Profile'
+import { MealPlan } from '@/lib/mongodb/models/MealPlan'
+import { WorkoutProgram } from '@/lib/mongodb/models/WorkoutProgram'
+import { FoodDiary } from '@/lib/mongodb/models/FoodDiary'
+import { ChatMessage } from '@/lib/mongodb/models/ChatMessage'
 
 async function requireAdmin() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-  const { data } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-  return data?.is_admin ? supabase : null
+  const session = await auth()
+  if (!session?.user) return false
+  await connectDB()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const profile = await Profile.findOne({ userId: session.user.id }).lean() as any
+  return !!profile?.is_admin
 }
 
 export async function GET() {
-  const supabase = await requireAdmin()
-  if (!supabase) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  const isAdmin = await requireAdmin()
+  if (!isAdmin) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
 
-  const [
-    { count: totalUsers },
-    { count: proUsers },
-    { count: mealPlans },
-    { count: workoutPrograms },
-    { count: diaryEntries },
-    { count: chatMessages },
-  ] = await Promise.all([
-    supabase.from('profiles').select('*', { count: 'exact', head: true }),
-    supabase.from('profiles').select('*', { count: 'exact', head: true }).neq('plan', 'free'),
-    supabase.from('meal_plans').select('*', { count: 'exact', head: true }),
-    supabase.from('workout_programs').select('*', { count: 'exact', head: true }),
-    supabase.from('food_diary').select('*', { count: 'exact', head: true }),
-    supabase.from('chat_messages').select('*', { count: 'exact', head: true }),
-  ])
+  const [totalUsers, proUsers, mealPlans, workoutPrograms, diaryEntries, chatMessages] =
+    await Promise.all([
+      Profile.countDocuments(),
+      Profile.countDocuments({ plan: { $ne: 'free' } }),
+      MealPlan.countDocuments(),
+      WorkoutProgram.countDocuments(),
+      FoodDiary.countDocuments(),
+      ChatMessage.countDocuments(),
+    ])
 
-  return NextResponse.json({
-    totalUsers: totalUsers || 0,
-    proUsers: proUsers || 0,
-    mealPlans: mealPlans || 0,
-    workoutPrograms: workoutPrograms || 0,
-    diaryEntries: diaryEntries || 0,
-    chatMessages: chatMessages || 0,
-  })
+  return NextResponse.json({ totalUsers, proUsers, mealPlans, workoutPrograms, diaryEntries, chatMessages })
 }

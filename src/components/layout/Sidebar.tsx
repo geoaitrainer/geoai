@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -19,15 +19,13 @@ export function Sidebar() {
   const router = useRouter()
 
   async function handleLogout() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
+    await signOut({ redirect: false })
     router.push('/login')
     router.refresh()
   }
 
   return (
     <aside className="hidden md:flex flex-col w-64 min-h-screen border-r border-[var(--border)] bg-[var(--card)] p-4">
-      {/* Logo */}
       <div className="flex items-center gap-3 px-2 mb-8">
         <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center">
           <span className="text-white text-lg">⚡</span>
@@ -38,7 +36,6 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 space-y-1">
         {navItems.map(item => (
           <Link
@@ -57,7 +54,6 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Logout */}
       <button
         onClick={handleLogout}
         className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)] transition-colors mt-4"

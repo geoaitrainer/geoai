@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -51,59 +51,56 @@ export default function RegisterPage() {
     setLoading(true)
     setError('')
 
-    const supabase = createClient()
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email: formData.email,
-      password: formData.password,
-      options: {
-        data: { name: formData.name },
-      },
-    })
-
-    if (signUpError || !data.user) {
-      setError(signUpError?.message || 'შეცდომა რეგისტრაციისას')
-      setLoading(false)
-      return
-    }
-
-    const { error: profileError } = await supabase.from('profiles').insert({
-      id: data.user.id,
-      name: formData.name,
-      age: parseInt(formData.age),
-      gender: formData.gender,
-      height_cm: parseFloat(formData.height_cm),
-      weight_kg: parseFloat(formData.weight_kg),
-      goal: formData.goal,
-      activity_level: formData.activity_level,
-      work_type: formData.work_type,
-      experience: formData.experience,
-      allergies: formData.allergies ? formData.allergies.split(',').map(s => s.trim()).filter(Boolean) : [],
-      conditions: formData.conditions ? formData.conditions.split(',').map(s => s.trim()).filter(Boolean) : [],
-      liked_foods: formData.liked_foods ? formData.liked_foods.split(',').map(s => s.trim()).filter(Boolean) : [],
-      disliked_foods: formData.disliked_foods ? formData.disliked_foods.split(',').map(s => s.trim()).filter(Boolean) : [],
-      daily_budget: parseFloat(formData.daily_budget),
-    })
-
-    if (profileError) {
-      setError('პროფილის შენახვა ვერ მოხერხდა')
-      setLoading(false)
-      return
-    }
-
-    // Calculate BMR/TDEE via API
-    await fetch('/api/profile/calculate', {
+    const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: data.user.id }),
+      body: JSON.stringify({
+        email: formData.email,
+        password: formData.password,
+        name: formData.name,
+        age: formData.age,
+        gender: formData.gender,
+        height_cm: formData.height_cm,
+        weight_kg: formData.weight_kg,
+        goal: formData.goal,
+        activity_level: formData.activity_level,
+        work_type: formData.work_type,
+        experience: formData.experience,
+        allergies: formData.allergies ? formData.allergies.split(',').map(s => s.trim()).filter(Boolean) : [],
+        conditions: formData.conditions ? formData.conditions.split(',').map(s => s.trim()).filter(Boolean) : [],
+        liked_foods: formData.liked_foods ? formData.liked_foods.split(',').map(s => s.trim()).filter(Boolean) : [],
+        disliked_foods: formData.disliked_foods ? formData.disliked_foods.split(',').map(s => s.trim()).filter(Boolean) : [],
+        daily_budget: formData.daily_budget,
+      }),
     })
 
+    if (!res.ok) {
+      const data = await res.json()
+      setError(data.error || 'შეცდომა რეგისტრაციისას')
+      setLoading(false)
+      return
+    }
+
+    const result = await signIn('credentials', {
+      email: formData.email,
+      password: formData.password,
+      redirect: false,
+    })
+
+    if (result?.error) {
+      setError('რეგისტრაცია დასრულდა, გთხოვთ შეხვიდეთ')
+      router.push('/login')
+      return
+    }
+
+    await fetch('/api/profile/calculate', { method: 'POST' })
     router.push('/dashboard')
     router.refresh()
+    setLoading(false)
   }
 
   return (
     <div className="card p-8 animate-fade-in">
-      {/* Step indicator */}
       <div className="flex items-center justify-between mb-8">
         {STEPS.map((s, i) => (
           <div key={i} className="flex items-center">
@@ -122,7 +119,6 @@ export default function RegisterPage() {
       <h2 className="text-xl font-semibold mb-1">{STEPS[step].icon} {STEPS[step].title}</h2>
       <p className="text-sm text-[var(--muted-foreground)] mb-6">ნაბიჯი {step + 1} / {STEPS.length}</p>
 
-      {/* Step 0: Account */}
       {step === 0 && (
         <div className="space-y-4">
           <Input id="name" label="სახელი" placeholder="თქვენი სახელი" value={formData.name} onChange={e => update('name', e.target.value)} required />
@@ -131,7 +127,6 @@ export default function RegisterPage() {
         </div>
       )}
 
-      {/* Step 1: Physical data */}
       {step === 1 && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -146,7 +141,6 @@ export default function RegisterPage() {
         </div>
       )}
 
-      {/* Step 2: Goals */}
       {step === 2 && (
         <div className="space-y-4">
           <Select id="goal" label="მიზანი" value={formData.goal} onChange={e => update('goal', e.target.value)}
@@ -160,7 +154,6 @@ export default function RegisterPage() {
         </div>
       )}
 
-      {/* Step 3: Food preferences */}
       {step === 3 && (
         <div className="space-y-4">
           <Input id="allergies" label="ალერგიები (მძიმით გამოყავით)" placeholder="რძე, კვერცხი, თხილი" value={formData.allergies} onChange={e => update('allergies', e.target.value)} />

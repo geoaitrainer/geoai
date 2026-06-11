@@ -1,51 +1,43 @@
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/auth'
 import { NextRequest, NextResponse } from 'next/server'
+import { connectDB } from '@/lib/mongodb/mongoose'
+import { Profile } from '@/lib/mongodb/models/Profile'
+import { ProgressEntry } from '@/lib/mongodb/models/ProgressEntry'
 import { openaiClient } from '@/lib/openai/client'
 import { buildProgressReviewPrompt } from '@/lib/openai/prompts'
-import type { Profile } from '@/types/profile'
+import type { Profile as ProfileType } from '@/types/profile'
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await auth()
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data, error } = await supabase
-    .from('progress_entries')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('date', { ascending: false })
+  await connectDB()
+  const entries = await ProgressEntry.find({ userId: session.user.id })
+    .sort({ date: -1 })
     .limit(50)
+    .lean()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  return NextResponse.json(JSON.parse(JSON.stringify(entries)))
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await auth()
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
+  await connectDB()
+  const userId = session.user.id
+  const saved = await ProgressEntry.create({ ...body, userId })
 
-  const { data: saved, error } = await supabase
-    .from('progress_entries')
-    .insert({ ...body, user_id: user.id })
-    .select()
-    .single()
+  const [profile, entries] = await Promise.all([
+    Profile.findOne({ userId }).lean(),
+    ProgressEntry.find({ userId }).sort({ date: 1 }).select('date weight_kg').lean(),
+  ])
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  // Auto-generate AI review if enough data (async, don't wait)
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-  const { data: entries } = await supabase
-    .from('progress_entries')
-    .select('date, weight_kg')
-    .eq('user_id', user.id)
-    .order('date', { ascending: true })
-
-  if (profile && entries && entries.length >= 2) {
+  if (profile && entries.length >= 2) {
     try {
-      const prompt = buildProgressReviewPrompt(profile as Profile, entries)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const prompt = buildProgressReviewPrompt(profile as unknown as ProfileType, entries as any[])
       const completion = await openaiClient.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
@@ -56,10 +48,10 @@ export async function POST(request: NextRequest) {
       })
       const review = completion.choices[0]?.message?.content
       if (review) {
-        await supabase.from('progress_entries').update({ ai_review: review }).eq('id', saved.id)
+        await ProgressEntry.findByIdAndUpdate(saved._id, { ai_review: review })
       }
     } catch {}
   }
 
-  return NextResponse.json(saved, { status: 201 })
+  return NextResponse.json(JSON.parse(JSON.stringify(saved)), { status: 201 })
 }

@@ -1,36 +1,30 @@
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { openaiClient } from '@/lib/openai/client'
 import { buildMealPlanPrompt } from '@/lib/openai/prompts'
-import type { Profile } from '@/types/profile'
+import { connectDB } from '@/lib/mongodb/mongoose'
+import { Profile } from '@/lib/mongodb/models/Profile'
+import { MealPlan } from '@/lib/mongodb/models/MealPlan'
+import type { Profile as ProfileType } from '@/types/profile'
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await auth()
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { type } = await request.json()
   const days = type === '30day' ? 30 : 7
 
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-
-  if (profileError || !profile) {
-    return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
-  }
+  await connectDB()
+  const userId = session.user.id
+  const profile = await Profile.findOne({ userId }).lean()
+  if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
 
   try {
-    const prompt = buildMealPlanPrompt(profile as Profile, days)
+    const prompt = buildMealPlanPrompt(profile as unknown as ProfileType, days)
     const completion = await openaiClient.chat.completions.create({
       model: 'gpt-4o',
       messages: [
-        {
-          role: 'system',
-          content: 'შენ ხარ კვების სპეციალისტი. პასუხობ მხოლოდ ვალიდური JSON ფორმატით.',
-        },
+        { role: 'system', content: 'შენ ხარ კვების სპეციალისტი. პასუხობ მხოლოდ ვალიდური JSON ფორმატით.' },
         { role: 'user', content: prompt },
       ],
       response_format: { type: 'json_object' },
@@ -42,27 +36,10 @@ export async function POST(request: NextRequest) {
 
     const planData = JSON.parse(content)
 
-    // Deactivate old plans
-    await supabase
-      .from('meal_plans')
-      .update({ is_active: false })
-      .eq('user_id', user.id)
-      .eq('type', type)
+    await MealPlan.updateMany({ userId, type }, { is_active: false })
+    const saved = await MealPlan.create({ userId, type, content: planData, is_active: true })
 
-    // Save new plan
-    const { data: savedPlan, error: saveError } = await supabase
-      .from('meal_plans')
-      .insert({
-        user_id: user.id,
-        type,
-        content: planData,
-        is_active: true,
-      })
-      .select()
-      .single()
-
-    if (saveError) return NextResponse.json({ error: saveError.message }, { status: 500 })
-    return NextResponse.json(savedPlan)
+    return NextResponse.json(JSON.parse(JSON.stringify(saved)))
   } catch (err) {
     console.error('Meal plan generation error:', err)
     return NextResponse.json({ error: 'Generation failed' }, { status: 500 })
@@ -70,17 +47,14 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await auth()
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data } = await supabase
-    .from('meal_plans')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .order('created_at', { ascending: false })
+  await connectDB()
+  const plans = await MealPlan.find({ userId: session.user.id, is_active: true })
+    .sort({ createdAt: -1 })
     .limit(2)
+    .lean()
 
-  return NextResponse.json(data || [])
+  return NextResponse.json(JSON.parse(JSON.stringify(plans)))
 }
