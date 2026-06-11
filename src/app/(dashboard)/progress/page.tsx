@@ -61,7 +61,7 @@ export default function ProgressPage() {
     <div className="animate-fade-in">
       <TopBar title="პროგრესის კონტროლი" subtitle="ყოველკვირეული AI შეფასება" />
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
         <Button onClick={() => setShowForm(!showForm)}>
           {showForm ? '✕ გაუქმება' : '➕ გაზომვის დამატება'}
         </Button>
@@ -155,7 +155,7 @@ export default function ProgressPage() {
             <CardHeader><CardTitle>ისტორია</CardTitle></CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full min-w-[380px] text-sm">
                   <thead>
                     <tr className="text-left text-[var(--muted-foreground)] border-b border-[var(--border)]">
                       <th className="pb-2 font-medium">თარიღი</th>

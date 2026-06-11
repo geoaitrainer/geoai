@@ -50,7 +50,7 @@ export default async function DashboardPage() {
         subtitle={`მიზანი: ${GOAL_LABELS[p.goal]}`}
       />
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard icon="🔥" label="BMR" value={`${p.bmr || 0}`} unit="კკალ" color="orange" />
           <StatCard icon="⚡" label="TDEE" value={`${p.tdee || 0}`} unit="კკალ" color="yellow" />

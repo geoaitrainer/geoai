@@ -57,7 +57,7 @@ export default function ProfilePage() {
     <div className="animate-fade-in">
       <TopBar title="ჩემი პროფილი" subtitle="პერსონალური მონაცემები" />
 
-      <div className="p-6 space-y-6 max-w-2xl">
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-2xl">
         {/* Calculated values */}
         <Card>
           <CardHeader><CardTitle>📊 გამოთვლილი ნორმები</CardTitle></CardHeader>

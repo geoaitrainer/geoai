@@ -8,7 +8,7 @@ interface TopBarProps {
 
 export function TopBar({ title, subtitle }: TopBarProps) {
   return (
-    <header className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] bg-[var(--card)]">
+    <header className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 border-b border-[var(--border)] bg-[var(--card)]">
       <div>
         <h1 className="text-lg font-semibold">{title}</h1>
         {subtitle && <p className="text-xs text-[var(--muted-foreground)]">{subtitle}</p>}

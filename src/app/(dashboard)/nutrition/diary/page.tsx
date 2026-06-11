@@ -154,7 +154,7 @@ export default function FoodDiaryPage() {
     <div className="animate-fade-in">
       <TopBar title="კვების დღიური" />
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
         {/* Date + totals */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
           <input
@@ -226,7 +226,7 @@ export default function FoodDiaryPage() {
               </div>
 
               <form onSubmit={handleAdd} className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input label="საკვების სახელი" value={form.food_name} onChange={e => setForm(p => ({ ...p, food_name: e.target.value }))} required placeholder="კვერცხი" />
                   <Input label="რაოდენობა (გ)" type="number" value={form.amount_g} onChange={e => setForm(p => ({ ...p, amount_g: e.target.value }))} placeholder="100" />
                 </div>

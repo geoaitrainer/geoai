@@ -16,7 +16,7 @@ export function MobileNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[var(--card)] border-t border-[var(--border)] px-2 pb-safe">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[var(--card)] border-t border-[var(--border)] px-2" style={{ paddingBottom: 'env(safe-area-inset-bottom, 4px)' }}>
       <div className="flex justify-around">
         {navItems.map(item => {
           const active = pathname === item.href || pathname.startsWith(item.href + '/')

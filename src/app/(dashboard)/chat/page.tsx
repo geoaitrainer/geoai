@@ -93,7 +93,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-dvh pb-20 md:pb-0">
       <TopBar title="AI ჩატი" subtitle="პირადი ტრენერი და კვების სპეციალისტი" />
 
       {/* Messages */}

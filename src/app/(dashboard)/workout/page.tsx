@@ -45,7 +45,7 @@ export default function WorkoutPage() {
     <div className="animate-fade-in">
       <TopBar title="ვარჯიშის პროგრამა" subtitle="AI-ით შედგენილი პერსონალური გეგმა" />
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
         {/* Generator */}
         <Card>
           <CardContent className="pt-6">
