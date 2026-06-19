@@ -33,7 +33,7 @@ export async function GET() {
     is_admin: p.is_admin,
     weight_kg: p.weight_kg,
     calorie_goal: p.calorie_goal,
-    createdAt: p.createdAt,
+    created_at: p.createdAt,
   }))
 
   return NextResponse.json(result)

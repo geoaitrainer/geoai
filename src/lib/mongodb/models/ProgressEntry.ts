@@ -9,6 +9,7 @@ const ProgressEntrySchema = new Schema(
     chest_cm: Number,
     waist_cm: Number,
     hips_cm: Number,
+    biceps_cm: Number,
     notes: String,
     photo_url: String,
     ai_review: String,

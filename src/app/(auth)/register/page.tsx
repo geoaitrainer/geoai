@@ -177,7 +177,17 @@ export default function RegisterPage() {
           </Button>
         )}
         {step < STEPS.length - 1 ? (
-          <Button onClick={() => setStep(s => s + 1)} className="flex-1">
+          <Button onClick={() => {
+            if (step === 0) {
+              if (!formData.name.trim() || !formData.email.trim()) { setError('სახელი და ელ-ფოსტა აუცილებელია'); return }
+              if (formData.password.length < 8) { setError('პაროლი მინიმუმ 8 სიმბოლო უნდა იყოს'); return }
+            }
+            if (step === 1) {
+              if (!formData.height_cm || !formData.weight_kg || !formData.age) { setError('ყველა ველი სავალდებულოა'); return }
+            }
+            setError('')
+            setStep(s => s + 1)
+          }} className="flex-1">
             შემდეგი
           </Button>
         ) : (

@@ -10,6 +10,7 @@ const FoodDiarySchema = new Schema(
     protein_g: Number,
     fat_g: Number,
     carbs_g: Number,
+    amount_g: Number,
     weight_g: Number,
     notes: String,
     photo_url: String,

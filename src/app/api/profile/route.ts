@@ -22,7 +22,10 @@ export async function PUT(request: NextRequest) {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await request.json()
+  const rawBody = await request.json()
+  // Strip privileged fields users must not self-modify
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { is_admin, plan, userId: _uid, _id, __v, ...body } = rawBody
   const bmr = calculateBMR(body as ProfileType)
   const tdee = calculateTDEE(bmr, body.activity_level)
   const macros = calculateMacros(tdee, body.goal, body.gender)
