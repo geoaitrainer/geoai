@@ -76,7 +76,7 @@ export default function LandingPage() {
       </div>
 
       <footer className="text-center py-8 text-[var(--muted-foreground)] text-sm border-t border-[var(--border)]">
-        © 2024 AI ტრენერი — ქართული ფიტნეს ასისტენტი
+        © 2026 შექმნილია გიორგი ქავთარაძის მიერ
       </footer>
     </div>
   )
