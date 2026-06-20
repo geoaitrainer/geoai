@@ -33,6 +33,8 @@ No test suite. Build is the only gate. Always run `npx tsc --noEmit` after edits
 
 **Admin access:** `Profile.is_admin: true`. `src/app/admin/layout.tsx` redirects non-admins. `PUT /api/profile` strips `is_admin`/`plan`/`userId` — users cannot self-elevate.
 
+**First-time admin setup:** POST `/api/setup-admin` with `{ email, secret }`. Secret defaults to `geoai-admin-2026` or `ADMIN_SETUP_SECRET` env var. Run once after registering.
+
 ### MongoDB / Mongoose
 
 - `src/lib/mongodb/mongoose.ts` — singleton `connectDB()`. Overrides `dns.promises` to `8.8.8.8` (Atlas SRV fix).
@@ -122,6 +124,8 @@ All calls via **OpenRouter** (`https://openrouter.ai/api/v1`, model `google/gemi
 
 Dark mode: `.dark` on `<html>`, persisted in `localStorage`, set by inline script in `layout.tsx` before hydration. CSS variables in `globals.css`. Custom Tailwind utilities: `card`, `btn-primary`, `input-field`, `label` (`@layer components`).
 
+**PostCSS:** `postcss.config.js` (CommonJS, not `.mjs`) with both `tailwindcss: {}` and `autoprefixer: {}`. Both packages must be installed. If CSS returns 404 in dev, delete `.next/` and restart — stale cache or missing autoprefixer causes silent failure.
+
 Mobile nav (`MobileNav.tsx`): 6 items — dashboard, nutrition, calendar, recipes, AI, progress. Dashboard layout: `pb-16 md:pb-0`. Chat: `h-dvh`.
 
 ### Key env vars
@@ -135,6 +139,7 @@ NEXT_PUBLIC_APP_URL    # HTTP-Referer sent to OpenRouter
 VAPID_PUBLIC_KEY       # web-push VAPID public key
 VAPID_PRIVATE_KEY      # web-push VAPID private key
 RESEND_API_KEY         # resend.com — missing causes runtime 503, not build failure
+ADMIN_SETUP_SECRET     # optional — overrides default "geoai-admin-2026" for /api/setup-admin
 ```
 
 ### Deployment (Vercel)
