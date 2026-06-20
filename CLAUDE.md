@@ -21,7 +21,7 @@ No test suite. Build is the only gate. Always run `npx tsc --noEmit` after edits
 
 **Language:** All UI, AI prompts, and output are in Georgian (ქართული).
 
-**GitHub:** `https://github.com/trendorage/aitrainer`
+**GitHub:** `https://github.com/geoaitrainer/geoai`
 
 **PWA:** `public/manifest.json` + `public/icon.svg` + `public/sw.js` (service worker for push notifications). Targets standalone mobile display.
 
@@ -139,16 +139,13 @@ RESEND_API_KEY         # resend.com — missing causes runtime 503, not build fa
 
 ### Deployment (Vercel)
 
-**Two separate Vercel projects:**
+| Account | Team | Project | Production URL |
+|---|---|---|---|
+| `geoaitrainer` | `aigeotrainer` (`team_FAb234VDVF8qflYGXQ4rzVsL`) | `trainer-app` (`prj_MMSdFbnzvP2Z5n4EUERNn6SmK08h`) | `https://trainer-app-theta-six.vercel.app` |
 
-| Account | Project | Production URL |
-|---|---|---|
-| `goodhomege-dev` (personal) | `trainer-app` | `https://trainer-app-goodhome.vercel.app` |
-| `trendoramarketplace` (team) | `trainer-app` | `https://trainer-app-trendoramarketplace.vercel.app` |
+Deploy command (non-interactive, requires token):
+```bash
+npx vercel deploy --prod --yes --scope aigeotrainer --token <VERCEL_TOKEN>
+```
 
-Current `.vercel/project.json` points to `trendoramarketplace`. To deploy to `goodhome`:
-1. Set `.vercel/project.json` → `{"projectId":"prj_yM1VTfNIHtPeEYZ7t1VoY6uYU6Jp","orgId":"FOZJPHjRqfQaVQSc2eF70yW9","projectName":"trainer-app"}`
-2. Run `VERCEL_TOKEN=<goodhome-token> vercel --prod --no-wait`
-3. Restore `.vercel/project.json`.
-
-Root Directory on Vercel must be set to `trainer-app/`. SSO protection enabled — deployments show `BLOCKED` in CLI but are live for users.
+Root Directory on Vercel is `trainer-app/`. All env vars are set on the Vercel project (encrypted). When redeploying after env changes, run deploy again — env vars are read at build time.
