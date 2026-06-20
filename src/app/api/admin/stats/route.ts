@@ -30,5 +30,42 @@ export async function GET() {
       ChatMessage.countDocuments(),
     ])
 
-  return NextResponse.json({ totalUsers, proUsers, mealPlans, workoutPrograms, diaryEntries, chatMessages })
+  // Last 14 days registration trend
+  const since = new Date()
+  since.setDate(since.getDate() - 13)
+  const recentUsers = await Profile.find({ createdAt: { $gte: since } })
+    .select('createdAt').lean() as { createdAt: Date }[]
+
+  const dayMap: Record<string, number> = {}
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    dayMap[d.toISOString().split('T')[0]] = 0
+  }
+  recentUsers.forEach(u => {
+    const key = new Date(u.createdAt).toISOString().split('T')[0]
+    if (key in dayMap) dayMap[key]++
+  })
+  const registrationTrend = Object.entries(dayMap).map(([date, count]) => ({ date, count }))
+
+  // Last 14 days AI chat messages
+  const recentChats = await ChatMessage.find({ createdAt: { $gte: since }, role: 'user' })
+    .select('createdAt').lean() as { createdAt: Date }[]
+  const chatMap: Record<string, number> = {}
+  Object.keys(dayMap).forEach(k => { chatMap[k] = 0 })
+  recentChats.forEach(m => {
+    const key = new Date(m.createdAt).toISOString().split('T')[0]
+    if (key in chatMap) chatMap[key]++
+  })
+  const chatTrend = Object.entries(chatMap).map(([date, count]) => ({ date, count }))
+
+  // Plan distribution
+  const planDist = await Profile.aggregate([
+    { $group: { _id: '$plan', count: { $sum: 1 } } }
+  ])
+
+  return NextResponse.json({
+    totalUsers, proUsers, mealPlans, workoutPrograms, diaryEntries, chatMessages,
+    registrationTrend, chatTrend, planDist,
+  })
 }

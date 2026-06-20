@@ -11,6 +11,7 @@ const navItems = [
   { href: '/workout', label: 'ვარჯიში', icon: '💪' },
   { href: '/calendar', label: 'კალენდარი', icon: '📅' },
   { href: '/progress', label: 'პროგრესი', icon: '📊' },
+  { href: '/recipes', label: 'რეცეპტები', icon: '👨‍🍳' },
   { href: '/chat', label: 'AI ჩატი', icon: '🤖' },
   { href: '/profile', label: 'პროფილი', icon: '⚙️' },
 ]

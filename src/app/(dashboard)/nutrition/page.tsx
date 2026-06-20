@@ -14,6 +14,7 @@ export default function NutritionPage() {
   const [planType, setPlanType] = useState<'7day' | '30day'>('7day')
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'plan' | 'shopping'>('plan')
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     loadPlans()
@@ -25,6 +26,14 @@ export default function NutritionPage() {
     const data = await res.json()
     if (data.length > 0) setActivePlan(data[0])
     setLoading(false)
+  }
+
+  async function handleExportPDF() {
+    if (!activePlan?.content?.days) return
+    setExporting(true)
+    const { exportMealPlanPDF } = await import('@/lib/pdf/export')
+    await exportMealPlanPDF('Meal Plan', activePlan.content.days)
+    setExporting(false)
   }
 
   async function generatePlan() {
@@ -70,6 +79,11 @@ export default function NutritionPage() {
                 <Button onClick={generatePlan} loading={generating}>
                   {generating ? 'მიმდინარეობს...' : '✨ AI გეგმა'}
                 </Button>
+                {activePlan && (
+                  <Button onClick={handleExportPDF} loading={exporting} className="btn-secondary">
+                    📄 PDF
+                  </Button>
+                )}
               </div>
             </div>
           </CardContent>

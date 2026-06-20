@@ -14,6 +14,9 @@ export default function ProgressPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [emailMsg, setEmailMsg] = useState('')
 
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -31,6 +34,23 @@ export default function ProgressPage() {
     const data = await res.json()
     setEntries(Array.isArray(data) ? data : [])
     setLoading(false)
+  }
+
+  async function handleSendEmail() {
+    setSending(true)
+    setEmailMsg('')
+    const res = await fetch('/api/email/weekly-report', { method: 'POST' })
+    const data = await res.json()
+    if (data.ok) setEmailMsg(`✅ გაიგზავნა: ${data.sent_to}`)
+    else setEmailMsg(`❌ ${data.error}`)
+    setSending(false)
+  }
+
+  async function handleExportPDF() {
+    setExporting(true)
+    const { exportProgressPDF } = await import('@/lib/pdf/export')
+    await exportProgressPDF('Progress', entries)
+    setExporting(false)
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -62,9 +82,22 @@ export default function ProgressPage() {
       <TopBar title="პროგრესის კონტროლი" subtitle="ყოველკვირეული AI შეფასება" />
 
       <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-        <Button onClick={() => setShowForm(!showForm)}>
-          {showForm ? '✕ გაუქმება' : '➕ გაზომვის დამატება'}
-        </Button>
+        <div className="flex gap-3 flex-wrap">
+          <Button onClick={() => setShowForm(!showForm)}>
+            {showForm ? '✕ გაუქმება' : '➕ გაზომვის დამატება'}
+          </Button>
+          {entries.length > 0 && (
+            <Button onClick={handleExportPDF} loading={exporting} className="btn-secondary">
+              📄 PDF გადმოწერა
+            </Button>
+          )}
+          <Button onClick={handleSendEmail} loading={sending} className="btn-secondary">
+            📧 კვირის ანგარიში
+          </Button>
+        </div>
+        {emailMsg && (
+          <p className={`text-sm mt-2 ${emailMsg.startsWith('✅') ? 'text-green-600' : 'text-red-500'}`}>{emailMsg}</p>
+        )}
 
         {showForm && (
           <Card className="animate-slide-up">

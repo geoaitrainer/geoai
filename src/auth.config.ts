@@ -8,7 +8,7 @@ export const authConfig: NextAuthConfig = {
       const isLoggedIn = !!session?.user
       const path = nextUrl.pathname
       const protectedPaths = [
-        "/dashboard", "/nutrition", "/workout", "/progress", "/chat", "/profile", "/admin",
+        "/dashboard", "/nutrition", "/workout", "/progress", "/chat", "/profile", "/admin", "/recipes", "/calendar",
       ]
       const isProtected = protectedPaths.some(p => path.startsWith(p))
       const isAuthPage = path === "/login" || path === "/register"

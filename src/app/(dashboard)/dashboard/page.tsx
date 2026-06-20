@@ -11,6 +11,7 @@ import { GOAL_LABELS } from '@/lib/utils'
 import Link from 'next/link'
 import { WeightChartWrapper } from '@/components/dashboard/WeightChartWrapper'
 import { TaskManagerCard } from '@/components/tasks/TaskManagerCard'
+import { WaterTracker } from '@/components/dashboard/WaterTracker'
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -124,6 +125,7 @@ export default async function DashboardPage() {
           <QuickAction href="/chat" icon="🤖" label="AI ჩატი" />
         </div>
 
+        <WaterTracker />
         <TaskManagerCard />
 
         {p.is_admin && (

@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import type { Profile } from '@/types/profile'
 import { GOAL_LABELS, ACTIVITY_LABELS, EXPERIENCE_LABELS, WORK_TYPE_LABELS } from '@/lib/utils'
+import { PushNotificationSetup } from '@/components/dashboard/PushNotificationSetup'
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -176,6 +177,8 @@ export default function ProfilePage() {
         <Button onClick={handleSave} loading={saving} size="lg" className="w-full">
           შენახვა და გადაანგარიშება
         </Button>
+
+        <PushNotificationSetup />
       </div>
     </div>
   )

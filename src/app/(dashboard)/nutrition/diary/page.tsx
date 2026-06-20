@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import type { FoodDiaryEntry, MealType } from '@/types/nutrition'
+import { searchGeorgianFoods, type GeorgianFood } from '@/data/georgian-foods'
 
 const MEAL_LABELS: Record<MealType, string> = {
   breakfast: '☀️ საუზმე',
@@ -49,6 +50,8 @@ function FoodDiaryContent() {
   const [aiSearching, setAiSearching] = useState(false)
   const [analysis, setAnalysis] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
+  const [geoSearch, setGeoSearch] = useState('')
+  const [geoResults, setGeoResults] = useState<GeorgianFood[]>([])
 
   useEffect(() => {
     loadEntries() // eslint-disable-line react-hooks/exhaustive-deps
@@ -71,6 +74,25 @@ function FoodDiaryContent() {
       fat_g: String(food.fat_g),
       carbs_g: String(food.carbs_g),
     }))
+  }
+
+  function fillFromGeo(food: GeorgianFood) {
+    setForm(prev => ({
+      ...prev,
+      food_name: food.name,
+      amount_g: String(food.amount_g),
+      calories: String(food.calories),
+      protein_g: String(food.protein_g),
+      fat_g: String(food.fat_g),
+      carbs_g: String(food.carbs_g),
+    }))
+    setGeoSearch('')
+    setGeoResults([])
+  }
+
+  function handleGeoSearch(q: string) {
+    setGeoSearch(q)
+    setGeoResults(searchGeorgianFoods(q))
   }
 
   async function handleAdd(e: React.FormEvent) {
@@ -196,15 +218,51 @@ function FoodDiaryContent() {
           <Card className="animate-slide-up">
             <CardHeader><CardTitle>საკვების დამატება</CardTitle></CardHeader>
             <CardContent>
+              {/* Georgian Food DB search */}
+              <div className="mb-4">
+                <p className="text-xs text-[var(--muted-foreground)] mb-2">🇬🇪 ქართული საკვების ბაზა (offline):</p>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={geoSearch}
+                    onChange={e => handleGeoSearch(e.target.value)}
+                    placeholder="ხინკალი, ლობიო, ხაჭაპური..."
+                    className="input-field w-full text-sm"
+                  />
+                  {geoResults.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 z-10 bg-[var(--card)] border border-[var(--border)] rounded-xl mt-1 shadow-lg overflow-hidden">
+                      {geoResults.map((f, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => fillFromGeo(f)}
+                          className="w-full text-left px-3 py-2 hover:bg-[var(--muted)] transition-colors border-b border-[var(--border)] last:border-0"
+                        >
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <span className="text-sm font-medium">{f.name}</span>
+                              <span className="text-xs text-[var(--muted-foreground)] ml-2">{f.category}</span>
+                            </div>
+                            <div className="text-xs text-[var(--muted-foreground)]">
+                              {f.calories}კკ · ც:{f.protein_g}გ
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* AI food search */}
               <div className="mb-4">
-                <p className="text-xs text-[var(--muted-foreground)] mb-2">🤖 AI საკვების ძიება:</p>
+                <p className="text-xs text-[var(--muted-foreground)] mb-2">🤖 AI საკვების ძიება (სხვა საკვები):</p>
                 <form onSubmit={handleAiSearch} className="flex gap-2">
                   <input
                     type="text"
                     value={aiSearch}
                     onChange={e => setAiSearch(e.target.value)}
-                    placeholder="მაგ: ხინკალი 3 ცალი, ბასტურმა 50გ..."
+                    placeholder="მაგ: პიცა, სუში, burger..."
                     className="input-field flex-1 text-sm"
                   />
                   <button type="submit" disabled={aiSearching}
