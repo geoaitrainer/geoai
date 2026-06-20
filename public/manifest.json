@@ -1,0 +1,39 @@
+{
+  "name": "AI ტრენერი",
+  "short_name": "ტრენერი",
+  "description": "პირადი AI ფიტნეს და კვების ასისტენტი ქართულ ენაზე",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#22c55e",
+  "background_color": "#0f1117",
+  "lang": "ka",
+  "categories": ["health", "fitness"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "AI ჩატი",
+      "url": "/chat",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "კვების დღიური",
+      "url": "/nutrition/diary",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    }
+  ]
+}

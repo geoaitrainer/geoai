@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { GOAL_LABELS } from '@/lib/utils'
 import Link from 'next/link'
 import { WeightChartWrapper } from '@/components/dashboard/WeightChartWrapper'
+import { TaskManagerCard } from '@/components/tasks/TaskManagerCard'
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -122,6 +123,19 @@ export default async function DashboardPage() {
           <QuickAction href="/progress" icon="📸" label="პროგრესი" />
           <QuickAction href="/chat" icon="🤖" label="AI ჩატი" />
         </div>
+
+        <TaskManagerCard />
+
+        {p.is_admin && (
+          <Link href="/admin" className="card p-4 flex items-center gap-3 hover:border-primary-500 transition-colors border-dashed border-2">
+            <span className="text-2xl">🔑</span>
+            <div>
+              <p className="font-semibold text-sm">ადმინ პანელი</p>
+              <p className="text-xs text-[var(--muted-foreground)]">მომხმარებლების მართვა</p>
+            </div>
+            <span className="ml-auto text-[var(--muted-foreground)]">→</span>
+          </Link>
+        )}
       </div>
     </div>
   )

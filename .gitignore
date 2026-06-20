@@ -35,4 +35,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-.vercel
+# env files (non-local)
+.env.production
+.env.vercel
+.env.goodhome
+
+# logs and scratch
+dev-server.log
+scratch/

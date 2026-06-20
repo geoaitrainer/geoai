@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -25,9 +26,10 @@ const COMMON_FOODS = [
   { name: 'ბრინჯი მოხარშული (100გ)', calories: 130, protein_g: 2.7, fat_g: 0.3, carbs_g: 28 },
 ]
 
-export default function FoodDiaryPage() {
+function FoodDiaryContent() {
   const today = new Date().toISOString().split('T')[0]
-  const [date, setDate] = useState(today)
+  const searchParams = useSearchParams()
+  const [date, setDate] = useState(searchParams.get('date') || today)
   const [entries, setEntries] = useState<FoodDiaryEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -285,5 +287,13 @@ export default function FoodDiaryPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function FoodDiaryPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-[var(--muted-foreground)]">იტვირთება...</div>}>
+      <FoodDiaryContent />
+    </Suspense>
   )
 }

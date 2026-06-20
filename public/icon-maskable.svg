@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#22c55e"/>
+  <text x="256" y="210" font-family="system-ui,sans-serif" font-size="130" font-weight="900" text-anchor="middle" fill="white" opacity="0.95">AI</text>
+  <text x="256" y="360" font-family="system-ui,sans-serif" font-size="72" font-weight="600" text-anchor="middle" fill="white" opacity="0.85">ტრენერი</text>
+</svg>

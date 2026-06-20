@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { WorkoutProgram, WorkoutDay } from '@/types/workout'
 import { EXPERIENCE_LABELS } from '@/lib/utils'
+import { WorkoutChecklist } from '@/components/tasks/WorkoutChecklist'
 
 export default function WorkoutPage() {
   const [program, setProgram] = useState<WorkoutProgram | null>(null)
@@ -113,6 +114,12 @@ export default function WorkoutPage() {
                   {day.muscle_groups.map(mg => <Badge key={mg} variant="protein">{mg}</Badge>)}
                   <Badge variant="default">⏱ {day.duration_minutes} წუთი</Badge>
                 </div>
+
+                <WorkoutChecklist
+                  dayIndex={activeDay}
+                  exercises={day.exercises}
+                  dayName={day.day_name}
+                />
 
                 {day.warmup && (
                   <div className="bg-orange-50 dark:bg-orange-900/10 rounded-xl p-4 text-sm">

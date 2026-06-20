@@ -9,6 +9,7 @@ const navItems = [
   { href: '/dashboard', label: 'დეშბორდი', icon: '🏠' },
   { href: '/nutrition', label: 'კვება', icon: '🥗' },
   { href: '/workout', label: 'ვარჯიში', icon: '💪' },
+  { href: '/calendar', label: 'კალენდარი', icon: '📅' },
   { href: '/progress', label: 'პროგრესი', icon: '📊' },
   { href: '/chat', label: 'AI ჩატი', icon: '🤖' },
   { href: '/profile', label: 'პროფილი', icon: '⚙️' },

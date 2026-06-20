@@ -2,9 +2,19 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'AI პირადი ტრენერი და კვების სპეციალისტი',
+  title: 'AI ტრენერი',
   description: 'პერსონალური AI ფიტნეს და კვების ასისტენტი ქართულ ენაზე',
   keywords: 'ფიტნეს, კვება, დიეტა, ვარჯიში, AI, ქართული',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'AI ტრენერი',
+  },
+  icons: {
+    icon: '/icon.svg',
+    apple: '/icon.svg',
+  },
 }
 
 export const viewport: Viewport = {
@@ -12,6 +22,10 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)', color: '#0f1117' },
+    { media: '(prefers-color-scheme: light)', color: '#22c55e' },
+  ],
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
