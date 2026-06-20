@@ -17,108 +17,138 @@ No test suite. Build is the only gate. Always run `npx tsc --noEmit` after edits
 
 ## Architecture
 
-**Stack:** Next.js 14 (App Router) · TypeScript · TailwindCSS · MongoDB Atlas (Mongoose) · NextAuth.js v5 · OpenRouter API (`google/gemini-2.5-flash-lite`) · Vercel AI SDK v6
+**Stack:** Next.js 14 (App Router) · TypeScript · TailwindCSS · MongoDB Atlas (Mongoose) · NextAuth.js v5 · OpenRouter API (`google/gemini-2.5-flash-lite`) · Vercel AI SDK v6 · recharts · jsPDF · Resend · web-push
 
 **Language:** All UI, AI prompts, and output are in Georgian (ქართული).
 
-**PWA:** `public/manifest.json` + `public/icon.svg` + `public/icon-maskable.svg`. Targets standalone mobile display. `layout.tsx` exports `metadata` (manifest, appleWebApp) and `viewport` (themeColor).
+**GitHub:** `https://github.com/trendorage/aitrainer`
+
+**PWA:** `public/manifest.json` + `public/icon.svg` + `public/sw.js` (service worker for push notifications). Targets standalone mobile display.
 
 ### Auth — NextAuth v5 (JWT, Credentials-only)
 
-- `src/auth.config.ts` — Edge-compatible config. Used by middleware `authorized` callback.
-- `src/auth.ts` — Credentials provider only (bcrypt). Google OAuth was removed.
-- `src/middleware.ts` — Protects `/dashboard`, `/nutrition`, `/workout`, `/progress`, `/chat`, `/profile`, `/admin`, `/calendar`. Redirects logged-in users away from `/login`, `/register`.
+- `src/auth.config.ts` — Edge-compatible config. Protected paths: `/dashboard`, `/nutrition`, `/workout`, `/progress`, `/chat`, `/profile`, `/admin`, `/recipes`, `/calendar`.
+- `src/auth.ts` — Credentials provider only (bcrypt).
 - `session.user.id` = MongoDB `_id.toString()`.
 
-**Admin access:** `Profile.is_admin: true`. `src/app/admin/layout.tsx` redirects non-admins. `PUT /api/profile` strips `is_admin`/`plan`/`userId` so users cannot self-elevate.
+**Admin access:** `Profile.is_admin: true`. `src/app/admin/layout.tsx` redirects non-admins. `PUT /api/profile` strips `is_admin`/`plan`/`userId` — users cannot self-elevate.
 
 ### MongoDB / Mongoose
 
 - `src/lib/mongodb/mongoose.ts` — singleton `connectDB()`. Overrides `dns.promises` to `8.8.8.8` (Atlas SRV fix).
-- Models in `src/lib/mongodb/models/`: `User`, `Profile`, `MealPlan`, `FoodDiary`, `WorkoutProgram`, `ProgressEntry`, `ChatMessage`, `Task`.
+- Models in `src/lib/mongodb/models/`: `User`, `Profile`, `MealPlan`, `FoodDiary`, `WorkoutProgram`, `ProgressEntry`, `ChatMessage`, `Task`, `WaterEntry`, `PushSubscription`.
 - All models use `userId: String` (not ObjectId refs).
-- Always `.lean()` for reads; serialize with `JSON.parse(JSON.stringify(doc))` before returning from API routes.
+- Always `.lean()` for reads; `JSON.parse(JSON.stringify(doc))` before returning from API routes.
 - Active plans: `is_active: Boolean`. Always `updateMany({ userId, type }, { is_active: false })` before inserting a new plan.
 - Mongoose strict mode silently drops unknown fields — add new fields to schema before saving.
 
 ### Route groups
 
 - `(auth)/` — login, register. Both `export const dynamic = 'force-dynamic'`.
-- `(dashboard)/` — Layout calls `auth()`, redirects to `/login` if no session. Pages: `dashboard`, `nutrition`, `nutrition/diary`, `workout`, `progress`, `chat`, `profile`, `calendar`.
+- `(dashboard)/` — Layout calls `auth()`, redirects to `/login` if no session. Pages: `dashboard`, `nutrition`, `nutrition/diary`, `workout`, `progress`, `chat`, `profile`, `calendar`, `recipes`.
 - `admin/` — `is_admin` check in layout. Users page supports create (POST) + cascade-delete (DELETE).
-
-### Task Manager
-
-`Task` model fields: `userId`, `type` (`nutrition`|`shopping`|`workout`), `title`, `date` (YYYY-MM-DD), `completed`, `order`, `meta` (Mixed).
-
-`/api/tasks` — GET (`?type=&date=`), POST, PATCH (toggle/rename by `id` in body), DELETE (`?id=`).
-
-Client components:
-- `src/components/tasks/TaskManagerCard.tsx` — Dashboard widget, tabbed: **🥗 კვების ტასკები** (auto-seeds from today's meal plan day) and **🛒 საყიდლები** (persistent shopping list).
-- `src/components/tasks/WorkoutChecklist.tsx` — Workout page widget. Seeds exercises from selected day as checkable tasks per `date+day_index`.
-
-Nutrition tasks auto-seed: fetch `/api/calendar?month=YYYY-MM`, compute `daysSincePlanCreation % days.length`, create one Task per meal + a water task.
 
 ### AI pipeline
 
 All calls via **OpenRouter** (`https://openrouter.ai/api/v1`, model `google/gemini-2.5-flash-lite`).
 
-- `src/lib/openai/client.ts` — module-level instantiation. Missing `OPENROUTER_API_KEY` at build time causes `OpenAIError: Missing credentials` during "collect page data" and fails the build.
-- `src/lib/openai/prompts.ts` — `buildChatSystemPrompt` contains a **fixed kidney-health/detox protocol** in Georgian. Not profile-adaptive. Injected profile name only.
+- `src/lib/openai/client.ts` — module-level instantiation. Missing `OPENROUTER_API_KEY` at build time fails the build.
+- `src/lib/openai/prompts.ts` — `buildChatSystemPrompt` is **profile-adaptive**: injects goal, BMI, macros, experience, food preferences, and summaries of active meal/workout plans. Each prompt function is named `build*Prompt`.
 - `src/lib/openai/safety.ts` — Georgian medical keyword filter, runs before AI call.
 
 | Route | Method | Description |
 |---|---|---|
-| `/api/ai/chat` | POST stream | Vercel AI SDK `streamText`. Loads Profile + active plans. |
-| `/api/ai/meal-plan` | GET/POST | 7 or 30-day meal plan (`response_format: json_object`). |
-| `/api/ai/workout-plan` | GET/POST | Gym or home workout program. |
-| `/api/ai/food-lookup` | POST | `{ food_name, amount_g }` → `{ calories, protein_g, fat_g, carbs_g }`. |
-| `/api/ai/nutrition-analysis` | GET | Diary analysis, accepts `?date=YYYY-MM-DD`. |
+| `/api/ai/chat` | POST stream | `streamText`. Loads Profile + active plans → adaptive system prompt. |
+| `/api/ai/meal-plan` | GET/POST | 7 or 30-day meal plan (JSON). |
+| `/api/ai/workout-plan` | GET/POST | Gym or home workout program (JSON). |
+| `/api/ai/food-lookup` | POST | `{ food_name, amount_g }` → macros. |
+| `/api/ai/nutrition-analysis` | GET | Diary analysis for `?date=YYYY-MM-DD`. |
+| `/api/ai/recipe` | POST | `{ ingredients }` → full recipe + macros per serving (JSON). |
 | `/api/calendar` | GET | Active plans + diary/progress dates for `?month=YYYY-MM`. |
 | `/api/tasks` | GET/POST/PATCH/DELETE | Task manager CRUD. |
+| `/api/water` | GET/POST/DELETE | Daily water intake. GET: `?date=` → `{ total_ml, entries }`. DELETE resets day. |
+| `/api/progress` | GET/POST | Body measurements (weight, waist, chest, biceps). |
+| `/api/email/weekly-report` | POST | Sends 7-day summary HTML email via Resend to session user's email. |
+| `/api/push` | GET/POST/DELETE | VAPID public key (GET), save subscription (POST), remove (DELETE). |
 | `/api/admin/users` | GET/POST/PUT/DELETE | List, create, update plan, cascade-delete users. |
+| `/api/admin/stats` | GET | KPIs + 14-day registration/chat trends + plan distribution for charts. |
+
+### Georgian Food Database
+
+`src/data/georgian-foods.ts` — static array of 50+ Georgian foods with `{ name, category, calories, protein_g, fat_g, carbs_g, serving, amount_g }`. `searchGeorgianFoods(query)` returns up to 8 matches. Used in `/nutrition/diary` for offline instant search (no AI needed). AI food-lookup is secondary, for non-Georgian foods.
+
+### Water Tracking
+
+`WaterEntry` model: `{ userId, date (YYYY-MM-DD), amount_ml }`. Dashboard widget `src/components/dashboard/WaterTracker.tsx` — SVG ring, goal 2500ml, quick-add buttons (+200/250/300/500ml).
+
+### Recipe Generator
+
+`/recipes` page + `/api/ai/recipe` — user enters ingredients, AI returns `{ name, servings, prep_minutes, cook_minutes, ingredients[], steps[], nutrition_per_serving, tips }`.
+
+### PDF Export
+
+`src/lib/pdf/export.ts` — client-side only (`'use client'`). Two functions: `exportProgressPDF(name, entries)` and `exportMealPlanPDF(name, days)`. Dynamically imports `jspdf` to avoid SSR issues. Called from progress and nutrition pages.
+
+### Analytics (Admin)
+
+`src/components/admin/AnalyticsCharts.tsx` — client component, fetches `/api/admin/stats`. Renders: KPI cards, 14-day registration bar chart, 14-day AI chat line chart, plan distribution pie chart. All via recharts.
+
+### Email — Resend
+
+`src/lib/email/resend.ts` — lazy singleton `getResend()` (throws if `RESEND_API_KEY` missing at runtime, not build time). `buildWeeklyReportHtml()` produces HTML email. Trigger: POST `/api/email/weekly-report` from progress page.
+
+### Push Notifications
+
+`public/sw.js` — service worker handles `push` event and `notificationclick`. Registered client-side in `PushNotificationSetup.tsx`. VAPID keys in env vars. `PushSubscription` model stores per-user subscription. Setup UI lives on `/profile` page.
+
+### Task Manager
+
+`Task` model: `{ userId, type (nutrition|shopping|workout), title, date (YYYY-MM-DD), completed, order, meta }`.
+
+- `TaskManagerCard.tsx` — Dashboard widget. Nutrition tasks auto-seed from today's meal plan day. Shopping list is persistent.
+- `WorkoutChecklist.tsx` — Workout page. Seeds exercises as tasks per `date+day_index`.
 
 ### Calendar date mapping
 
-`/calendar` page maps plan days to real dates client-side:
+`/calendar` maps plan days to real calendar dates client-side:
 - **Meal plan:** `dayIndex = daysSincePlanCreation % plan.days.length`
-- **Workout:** within each 7-day cycle from `created_at`, first `days_per_week` days = workout, rest = rest.
-- `/nutrition/diary` accepts `?date=YYYY-MM-DD` (calendar deep-link).
+- **Workout:** within each 7-day cycle, first `days_per_week` days = workout, rest = rest.
 
 ### Fitness calculations
 
-`src/lib/calculations/` — `bmr.ts` (Mifflin-St Jeor), `tdee.ts` (BMR × multiplier), `macros.ts` (goal split, floor 1500/1200 kcal). `PUT /api/profile` and `POST /api/profile/calculate` recalculate all four.
+`src/lib/calculations/` — `bmr.ts` (Mifflin-St Jeor), `tdee.ts` (BMR × multiplier), `macros.ts` (goal split). `PUT /api/profile` and `POST /api/profile/calculate` recalculate all four.
 
 ### Styling
 
 Dark mode: `.dark` on `<html>`, persisted in `localStorage`, set by inline script in `layout.tsx` before hydration. CSS variables in `globals.css`. Custom Tailwind utilities: `card`, `btn-primary`, `input-field`, `label` (`@layer components`).
 
-Mobile nav (`MobileNav.tsx`): backdrop-blur, `env(safe-area-inset-bottom)`, `h-14` (56px), 6 items. Dashboard layout: `pb-16 md:pb-0`. Chat: `h-dvh`.
+Mobile nav (`MobileNav.tsx`): 6 items — dashboard, nutrition, calendar, recipes, AI, progress. Dashboard layout: `pb-16 md:pb-0`. Chat: `h-dvh`.
 
 ### Key env vars
 
 ```
-MONGODB_URI          # mongodb+srv://... Atlas SRV
-AUTH_SECRET          # 32+ char random — JWT signing
-NEXTAUTH_URL         # http://localhost:3000 or https://...
-OPENROUTER_API_KEY   # sk-or-v1-... from openrouter.ai
-NEXT_PUBLIC_APP_URL  # HTTP-Referer sent to OpenRouter
+MONGODB_URI            # mongodb+srv://... Atlas SRV
+AUTH_SECRET            # 32+ char random — JWT signing
+NEXTAUTH_URL           # must match production domain exactly — mismatch breaks session cookies
+OPENROUTER_API_KEY     # sk-or-v1-... — missing at build time fails build
+NEXT_PUBLIC_APP_URL    # HTTP-Referer sent to OpenRouter
+VAPID_PUBLIC_KEY       # web-push VAPID public key
+VAPID_PRIVATE_KEY      # web-push VAPID private key
+RESEND_API_KEY         # resend.com — missing causes runtime 503, not build failure
 ```
 
 ### Deployment (Vercel)
 
 **Two separate Vercel projects:**
 
-| Account | Project | Production URL | Deploy command |
-|---|---|---|---|
-| `goodhomege-dev` (personal) | `trainer-app` | `https://trainer-app-goodhome.vercel.app` | `VERCEL_TOKEN=<goodhome-token> vercel --prod` |
-| `trendoramarketplace` (team) | `trainer-app` | `https://trainer-app-trendoramarketplace.vercel.app` | `vercel --prod --scope trendoramarketplace` |
+| Account | Project | Production URL |
+|---|---|---|
+| `goodhomege-dev` (personal) | `trainer-app` | `https://trainer-app-goodhome.vercel.app` |
+| `trendoramarketplace` (team) | `trainer-app` | `https://trainer-app-trendoramarketplace.vercel.app` |
 
-**Primary production site** is the `goodhome` project. To deploy there:
-1. Temporarily set `.vercel/project.json` → `{"projectId":"prj_yM1VTfNIHtPeEYZ7t1VoY6uYU6Jp","orgId":"FOZJPHjRqfQaVQSc2eF70yW9","projectName":"trainer-app"}`
+Current `.vercel/project.json` points to `trendoramarketplace`. To deploy to `goodhome`:
+1. Set `.vercel/project.json` → `{"projectId":"prj_yM1VTfNIHtPeEYZ7t1VoY6uYU6Jp","orgId":"FOZJPHjRqfQaVQSc2eF70yW9","projectName":"trainer-app"}`
 2. Run `VERCEL_TOKEN=<goodhome-token> vercel --prod --no-wait`
-3. Restore `.vercel/project.json` to trendoramarketplace values.
+3. Restore `.vercel/project.json`.
 
-All 5 env vars must be set on the Vercel project. Missing `OPENROUTER_API_KEY` fails build. `NEXTAUTH_URL` must match the production domain exactly — mismatch silently breaks session cookies.
-
-Deployment Protection (SSO) is enabled on both projects — deployments show `BLOCKED`/`UNKNOWN` in CLI but are live for users with SSO bypass cookie.
+Root Directory on Vercel must be set to `trainer-app/`. SSO protection enabled — deployments show `BLOCKED` in CLI but are live for users.
