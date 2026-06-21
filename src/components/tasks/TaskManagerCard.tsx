@@ -276,15 +276,97 @@ function ShopItem({ item, onToggle, onDelete }: { item: Task; onToggle: (i: Task
   )
 }
 
+// ─── Personal tasks ───────────────────────────────────────────────────────────
+
+function PersonalTab() {
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [loading, setLoading] = useState(true)
+  const [text, setText] = useState('')
+  const [adding, setAdding] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/tasks?type=personal')
+      .then(r => r.json())
+      .then(data => { setTasks(Array.isArray(data) ? data : []); setLoading(false) })
+  }, [])
+
+  async function add() {
+    if (!text.trim() || adding) return
+    setAdding(true)
+    const t = await apiCreate({ type: 'personal', title: text.trim() })
+    if (t) { setTasks(prev => [t, ...prev]); setText('') }
+    setAdding(false)
+  }
+
+  async function toggle(task: Task) {
+    const updated = await apiToggle(task._id, !task.completed)
+    if (updated) setTasks(prev => prev.map(t => t._id === task._id ? updated : t))
+  }
+
+  async function del(id: string) {
+    await apiDelete(id)
+    setTasks(prev => prev.filter(t => t._id !== id))
+  }
+
+  async function clearDone() {
+    const done = tasks.filter(t => t.completed)
+    await Promise.all(done.map(t => apiDelete(t._id)))
+    setTasks(prev => prev.filter(t => !t.completed))
+  }
+
+  const pending = tasks.filter(t => !t.completed)
+  const done = tasks.filter(t => t.completed)
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <input
+          value={text}
+          onChange={e => setText(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && add()}
+          placeholder="ახალი ტასკის დამატება..."
+          className="input-field flex-1 text-sm"
+        />
+        <button onClick={add} disabled={adding || !text.trim()}
+          className="btn-primary px-4 text-sm flex-shrink-0">+</button>
+      </div>
+
+      {loading ? (
+        <p className="text-center text-sm text-[var(--muted-foreground)] py-4">იტვირთება...</p>
+      ) : tasks.length === 0 ? (
+        <p className="text-center text-sm text-[var(--muted-foreground)] py-4">ტასკები არ არის — დაამატე პირველი</p>
+      ) : (
+        <div className="space-y-1">
+          {pending.map(task => (
+            <ShopItem key={task._id} item={task} onToggle={toggle} onDelete={del} />
+          ))}
+          {done.length > 0 && (
+            <>
+              <div className="flex items-center justify-between pt-1 pb-0.5">
+                <span className="text-xs text-[var(--muted-foreground)]">შესრულებული ({done.length})</span>
+                <button onClick={clearDone} className="text-xs text-red-500 hover:text-red-700">წაშლა</button>
+              </div>
+              {done.map(task => (
+                <ShopItem key={task._id} item={task} onToggle={toggle} onDelete={del} />
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Main card ────────────────────────────────────────────────────────────────
 
-type Tab = 'nutrition' | 'shopping'
+type Tab = 'nutrition' | 'shopping' | 'personal'
 
 export function TaskManagerCard() {
-  const [tab, setTab] = useState<Tab>('nutrition')
+  const [tab, setTab] = useState<Tab>('personal')
 
   const tabs: { key: Tab; icon: string; label: string }[] = [
-    { key: 'nutrition', icon: '🥗', label: 'კვების ტასკები' },
+    { key: 'personal', icon: '✅', label: 'პირადი' },
+    { key: 'nutrition', icon: '🥗', label: 'კვება' },
     { key: 'shopping', icon: '🛒', label: 'საყიდლები' },
   ]
 
@@ -309,6 +391,7 @@ export function TaskManagerCard() {
 
       {/* Tab content */}
       <div className="p-5">
+        {tab === 'personal' && <PersonalTab />}
         {tab === 'nutrition' && <NutritionTab />}
         {tab === 'shopping' && <ShoppingTab />}
       </div>

@@ -2,7 +2,7 @@ import mongoose from 'mongoose'
 
 const TaskSchema = new mongoose.Schema({
   userId: { type: String, required: true },
-  type: { type: String, enum: ['nutrition', 'shopping', 'workout'], required: true },
+  type: { type: String, enum: ['nutrition', 'shopping', 'workout', 'personal'], required: true },
   title: { type: String, required: true },
   date: { type: String, default: '' },
   completed: { type: Boolean, default: false },
