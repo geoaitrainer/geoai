@@ -16,7 +16,7 @@ export default function LandingPage() {
       <nav className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] max-w-7xl mx-auto">
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center">
-            <span className="text-white text-lg">⚡</span>
+            <span className="text-white text-lg">💪</span>
           </div>
           <span className="font-bold text-lg">AI ტრენერი</span>
         </div>

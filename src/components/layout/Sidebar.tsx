@@ -30,7 +30,7 @@ export function Sidebar() {
     <aside className="hidden md:flex flex-col w-64 min-h-screen border-r border-[var(--border)] bg-[var(--card)] p-4">
       <div className="flex items-center gap-3 px-2 mb-8">
         <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center">
-          <span className="text-white text-lg">⚡</span>
+          <span className="text-white text-lg">💪</span>
         </div>
         <div>
           <p className="font-bold text-sm">AI ტრენერი</p>
