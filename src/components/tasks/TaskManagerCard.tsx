@@ -177,22 +177,22 @@ function NutritionTab() {
 
 // ─── Shopping list ────────────────────────────────────────────────────────────
 
-function ShoppingTab() {
+function ShoppingTab({ type = 'shopping', placeholder = 'პროდუქტის დამატება...', emptyText = 'სია ცარიელია — დაამატე პროდუქტი' }: { type?: string; placeholder?: string; emptyText?: string }) {
   const [items, setItems] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [text, setText] = useState('')
   const [adding, setAdding] = useState(false)
 
   useEffect(() => {
-    fetch('/api/tasks?type=shopping')
+    fetch(`/api/tasks?type=${type}`)
       .then(r => r.json())
       .then(data => { setItems(Array.isArray(data) ? data : []); setLoading(false) })
-  }, [])
+  }, [type])
 
   async function add() {
     if (!text.trim() || adding) return
     setAdding(true)
-    const t = await apiCreate({ type: 'shopping', title: text.trim() })
+    const t = await apiCreate({ type, title: text.trim() })
     if (t) { setItems(prev => [...prev, t]); setText('') }
     setAdding(false)
   }
@@ -223,7 +223,7 @@ function ShoppingTab() {
           value={text}
           onChange={e => setText(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && add()}
-          placeholder="პროდუქტის დამატება..."
+          placeholder={placeholder}
           className="input-field flex-1 text-sm"
         />
         <button onClick={add} disabled={adding || !text.trim()}
@@ -233,7 +233,7 @@ function ShoppingTab() {
       {loading ? (
         <p className="text-center text-sm text-[var(--muted-foreground)] py-4">იტვირთება...</p>
       ) : items.length === 0 ? (
-        <p className="text-center text-sm text-[var(--muted-foreground)] py-4">სია ცარიელია — დაამატე პროდუქტი</p>
+        <p className="text-center text-sm text-[var(--muted-foreground)] py-4">{emptyText}</p>
       ) : (
         <div className="space-y-1">
           {pending.map(item => (
@@ -359,15 +359,16 @@ function PersonalTab() {
 
 // ─── Main card ────────────────────────────────────────────────────────────────
 
-type Tab = 'nutrition' | 'shopping' | 'personal'
+type Tab = 'nutrition' | 'shopping' | 'personal' | 'personal_shopping'
 
 export function TaskManagerCard() {
   const [tab, setTab] = useState<Tab>('personal')
 
   const tabs: { key: Tab; icon: string; label: string }[] = [
     { key: 'personal', icon: '✅', label: 'პირადი' },
+    { key: 'personal_shopping', icon: '🛍️', label: 'საყიდლები' },
     { key: 'nutrition', icon: '🥗', label: 'კვება' },
-    { key: 'shopping', icon: '🛒', label: 'საყიდლები' },
+    { key: 'shopping', icon: '🛒', label: 'სურსათი' },
   ]
 
   return (
@@ -392,8 +393,9 @@ export function TaskManagerCard() {
       {/* Tab content */}
       <div className="p-5">
         {tab === 'personal' && <PersonalTab />}
+        {tab === 'personal_shopping' && <ShoppingTab type="personal_shopping" placeholder="საყიდლის დამატება..." emptyText="სია ცარიელია — დაამატე საყიდელი" />}
         {tab === 'nutrition' && <NutritionTab />}
-        {tab === 'shopping' && <ShoppingTab />}
+        {tab === 'shopping' && <ShoppingTab type="shopping" placeholder="პროდუქტის დამატება..." emptyText="სია ცარიელია — დაამატე პროდუქტი" />}
       </div>
     </div>
   )
