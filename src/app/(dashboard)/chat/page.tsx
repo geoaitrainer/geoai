@@ -100,8 +100,8 @@ export default function ChatPage() {
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center pb-20">
-            <div className="w-20 h-20 rounded-3xl bg-primary-600 flex items-center justify-center text-4xl mb-4">
-              🤖
+            <div className="w-20 h-20 rounded-3xl overflow-hidden shadow-lg mb-4">
+              <img src="/icon.svg" alt="AI ტრენერი" className="w-full h-full object-cover" />
             </div>
             <h2 className="text-xl font-semibold mb-2">AI ტრენერი მზადაა!</h2>
             <p className="text-[var(--muted-foreground)] text-sm mb-8 max-w-sm">
@@ -124,8 +124,8 @@ export default function ChatPage() {
         {messages.map(msg => (
           <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-slide-up`}>
             {msg.role === 'assistant' && (
-              <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white text-sm mr-2 mt-1 flex-shrink-0">
-                🤖
+              <div className="w-8 h-8 rounded-full overflow-hidden mr-2 mt-1 flex-shrink-0 shadow-sm">
+                <img src="/icon.svg" alt="AI" className="w-full h-full object-cover" />
               </div>
             )}
             <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${

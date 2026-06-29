@@ -16,13 +16,12 @@ export default function LandingPage() {
       <nav className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] max-w-7xl mx-auto">
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center">
-            <span className="text-white text-lg">⚡</span>
+            <span className="text-white text-lg">💪</span>
           </div>
           <span className="font-bold text-lg">AI ტრენერი</span>
         </div>
         <div className="flex gap-3">
-          <Link href="/login" className="btn-secondary text-sm">შესვლა</Link>
-          <Link href="/register" className="btn-primary text-sm">უფასოდ დაწყება</Link>
+          <Link href="/login" className="btn-primary text-sm">შესვლა</Link>
         </div>
       </nav>
 
@@ -43,11 +42,8 @@ export default function LandingPage() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link href="/register" className="btn-primary text-lg px-8 py-4">
-            უფასოდ დაწყება →
-          </Link>
-          <Link href="/login" className="btn-secondary text-lg px-8 py-4">
-            შესვლა
+          <Link href="/login" className="btn-primary text-lg px-8 py-4">
+            შესვლა →
           </Link>
         </div>
       </div>
@@ -69,9 +65,9 @@ export default function LandingPage() {
       {/* CTA */}
       <div className="bg-primary-600 text-white py-16 px-6 text-center">
         <h2 className="text-3xl font-bold mb-4">დაიწყე დღესვე</h2>
-        <p className="text-primary-100 mb-8">რეგისტრაცია 2 წუთში. არანაირი ბარათი არ სჭირდება.</p>
-        <Link href="/register" className="inline-block bg-white text-primary-600 font-bold px-8 py-4 rounded-xl hover:bg-primary-50 transition-colors">
-          უფასოდ შექმენი ანგარიში →
+        <p className="text-primary-100 mb-8">პერსონალური AI ფიტნეს ასისტენტი ქართულ ენაზე.</p>
+        <Link href="/login" className="inline-block bg-white text-primary-600 font-bold px-8 py-4 rounded-xl hover:bg-primary-50 transition-colors">
+          შესვლა →
         </Link>
       </div>
 

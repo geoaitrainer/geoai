@@ -1,12 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#16a34a"/>
-  <rect width="512" height="512" rx="112" fill="url(#g)"/>
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#22c55e"/>
       <stop offset="100%" stop-color="#15803d"/>
     </linearGradient>
   </defs>
-  <text x="256" y="200" font-family="system-ui,sans-serif" font-size="130" font-weight="900" text-anchor="middle" fill="white" opacity="0.95">AI</text>
-  <text x="256" y="350" font-family="system-ui,sans-serif" font-size="72" font-weight="600" text-anchor="middle" fill="white" opacity="0.85">ტრენერი</text>
+  <rect width="512" height="512" rx="112" fill="url(#g)"/>
+  <!-- Dumbbell bar -->
+  <rect x="176" y="240" width="160" height="32" rx="16" fill="white" opacity="0.95"/>
+  <!-- Left weight outer -->
+  <rect x="108" y="196" width="44" height="120" rx="14" fill="white" opacity="0.95"/>
+  <!-- Left weight inner -->
+  <rect x="152" y="216" width="24" height="80" rx="8" fill="white" opacity="0.95"/>
+  <!-- Right weight inner -->
+  <rect x="336" y="216" width="24" height="80" rx="8" fill="white" opacity="0.95"/>
+  <!-- Right weight outer -->
+  <rect x="360" y="196" width="44" height="120" rx="14" fill="white" opacity="0.95"/>
+  <!-- AI text below -->
+  <text x="256" y="380" font-family="system-ui,sans-serif" font-size="68" font-weight="800" text-anchor="middle" fill="white" opacity="0.9">AI</text>
 </svg>

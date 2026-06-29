@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { TopBar } from '@/components/layout/TopBar'
+import { TaskManagerCard } from '@/components/tasks/TaskManagerCard'
 
 interface MealInfo {
   name: string
@@ -131,6 +132,8 @@ export default function CalendarPage() {
       <TopBar title="კალენდარი" subtitle="კვება და ვარჯიშის გეგმა" />
 
       <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4">
+        <TaskManagerCard />
+
         {/* Month nav */}
         <div className="flex items-center justify-between">
           <button
