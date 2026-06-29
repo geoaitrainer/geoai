@@ -54,8 +54,22 @@ export default async function DashboardPage() {
 
       <div className="p-4 md:p-6 space-y-4 md:space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon="🔥" label="BMR" value={`${p.bmr || 0}`} unit="კკალ" color="orange" />
-          <StatCard icon="⚡" label="TDEE" value={`${p.tdee || 0}`} unit="კკალ" color="yellow" />
+          <StatCard
+            icon="🔥"
+            label="საბაზო კალორია"
+            tooltip="BMR — ენერგია მოსვენებაში"
+            value={`${p.bmr || 0}`}
+            unit="კკალ"
+            color="orange"
+          />
+          <StatCard
+            icon="⚡"
+            label="დღიური საჭიროება"
+            tooltip="TDEE — სრული დღიური კალორია"
+            value={`${p.tdee || 0}`}
+            unit="კკალ"
+            color="yellow"
+          />
           <StatCard icon="🎯" label="მიზანი" value={`${p.calorie_goal || 0}`} unit="კკალ" color="green" />
           <StatCard icon="⚖️" label="წონა" value={`${latestWeight}`} unit="კგ" color="blue" />
         </div>
@@ -119,10 +133,10 @@ export default async function DashboardPage() {
         )}
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <QuickAction href="/nutrition" icon="🥗" label="კვების გეგმა" />
-          <QuickAction href="/workout" icon="💪" label="დღის ვარჯიში" />
-          <QuickAction href="/progress" icon="📸" label="პროგრესი" />
-          <QuickAction href="/chat" icon="🤖" label="AI ჩატი" />
+          <QuickAction href="/nutrition" icon="🥗" label="კვების გეგმა" borderClass="hover:border-primary-500" />
+          <QuickAction href="/workout" icon="💪" label="დღის ვარჯიში" borderClass="hover:border-workout" />
+          <QuickAction href="/progress" icon="📸" label="პროგრესი" borderClass="hover:border-progress" />
+          <QuickAction href="/chat" icon="🤖" label="AI ჩატი" borderClass="hover:border-chat" />
         </div>
 
         <WaterTracker />
@@ -143,7 +157,16 @@ export default async function DashboardPage() {
   )
 }
 
-function StatCard({ icon, label, value, unit, color }: { icon: string; label: string; value: string; unit: string; color: string }) {
+function StatCard({
+  icon, label, tooltip, value, unit, color,
+}: {
+  icon: string
+  label: string
+  tooltip?: string
+  value: string
+  unit: string
+  color: string
+}) {
   const colors: Record<string, string> = {
     orange: 'bg-orange-100 dark:bg-orange-900/20',
     yellow: 'bg-yellow-100 dark:bg-yellow-900/20',
@@ -151,10 +174,13 @@ function StatCard({ icon, label, value, unit, color }: { icon: string; label: st
     blue: 'bg-blue-100 dark:bg-blue-900/20',
   }
   return (
-    <div className={`card p-4 ${colors[color]}`}>
+    <div className={`card p-4 ${colors[color]}`} title={tooltip}>
       <p className="text-2xl mb-1">{icon}</p>
-      <p className="text-xs text-[var(--muted-foreground)]">{label}</p>
-      <p className="text-xl font-bold">{value} <span className="text-sm font-normal text-[var(--muted-foreground)]">{unit}</span></p>
+      <p className="text-xs text-[var(--muted-foreground)] leading-tight">{label}</p>
+      <p className="text-xl font-bold mt-1">
+        {value}{' '}
+        <span className="text-sm font-normal text-[var(--muted-foreground)]">{unit}</span>
+      </p>
     </div>
   )
 }
@@ -184,9 +210,9 @@ function MacroRow({ icon, label, value, unit, variant }: { icon: string; label: 
   )
 }
 
-function QuickAction({ href, icon, label }: { href: string; icon: string; label: string }) {
+function QuickAction({ href, icon, label, borderClass = 'hover:border-primary-500' }: { href: string; icon: string; label: string; borderClass?: string }) {
   return (
-    <Link href={href} className="card p-4 flex flex-col items-center gap-2 hover:border-primary-500 transition-colors text-center">
+    <Link href={href} className={`card p-4 flex flex-col items-center gap-2 transition-colors text-center ${borderClass}`}>
       <span className="text-2xl">{icon}</span>
       <span className="text-xs font-medium text-[var(--foreground)]">{label}</span>
     </Link>

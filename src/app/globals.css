@@ -13,6 +13,21 @@
     --muted: #f9fafb;
     --muted-foreground: #6b7280;
     --ring: #22c55e;
+    --primary-gradient: linear-gradient(135deg, #22c55e 0%, #059669 100%);
+
+    /* Semantic colors */
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --destructive-muted: #fef2f2;
+    --success: #16a34a;
+    --success-foreground: #ffffff;
+    --success-muted: #f0fdf4;
+    --warning: #d97706;
+    --warning-foreground: #ffffff;
+    --warning-muted: #fffbeb;
+    --info: #2563eb;
+    --info-foreground: #ffffff;
+    --info-muted: #eff6ff;
   }
 
   .dark {
@@ -25,30 +40,41 @@
     --muted: #1e2433;
     --muted-foreground: #9ca3af;
     --ring: #22c55e;
+    --primary-gradient: linear-gradient(135deg, #22c55e 0%, #059669 100%);
+
+    /* Semantic colors */
+    --destructive: #dc2626;
+    --destructive-foreground: #ffffff;
+    --destructive-muted: rgba(220, 38, 38, 0.15);
+    --success: #22c55e;
+    --success-foreground: #ffffff;
+    --success-muted: rgba(34, 197, 94, 0.12);
+    --warning: #f59e0b;
+    --warning-foreground: #ffffff;
+    --warning-muted: rgba(245, 158, 11, 0.12);
+    --info: #3b82f6;
+    --info-foreground: #ffffff;
+    --info-muted: rgba(59, 130, 246, 0.12);
   }
 
   body {
     background: var(--background);
     color: var(--foreground);
     font-family: 'FiraGO', 'DejaVu Sans', system-ui, sans-serif;
-    /* PWA / app-like */
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Prevent iOS bounce on fixed elements */
   html {
     overscroll-behavior: none;
   }
 
-  /* App-like: no text selection on interactive UI */
   button, a, nav, label {
     -webkit-user-select: none;
     user-select: none;
   }
 
-  /* Smooth font rendering */
   * {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -79,6 +105,10 @@
   .label {
     @apply text-sm font-medium text-[var(--foreground)] mb-1 block;
   }
+
+  .skeleton {
+    @apply bg-[var(--muted)] rounded animate-skeleton;
+  }
 }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -90,6 +120,8 @@
   .text-balance { text-wrap: balance; }
   .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
   .animate-slide-up { animation: slideUp 0.3s ease-out; }
+  .animate-skeleton { animation: skeletonPulse 1.5s ease-in-out infinite; }
+  .animate-page { animation: pageSlideIn 0.22s ease-out; }
 }
 
 @keyframes fadeIn {
@@ -100,4 +132,14 @@
 @keyframes slideUp {
   from { transform: translateY(10px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes pageSlideIn {
+  from { transform: translateX(14px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }

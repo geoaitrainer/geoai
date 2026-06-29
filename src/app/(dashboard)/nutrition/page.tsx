@@ -1,6 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import { useSwipe } from '@/hooks/useSwipe'
+import { haptic } from '@/lib/haptic'
 import { TopBar } from '@/components/layout/TopBar'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -37,6 +39,7 @@ export default function NutritionPage() {
   }
 
   async function generatePlan() {
+    haptic('medium')
     setGenerating(true)
     const res = await fetch('/api/ai/meal-plan', {
       method: 'POST',
@@ -45,9 +48,20 @@ export default function NutritionPage() {
     })
     if (res.ok) {
       await loadPlans()
+      haptic('success')
     }
     setGenerating(false)
   }
+
+  const swipeHandlers = useSwipe(
+    useCallback(() => {
+      const maxDay = (activePlan?.content?.days?.length ?? 1) - 1
+      if (activeDay < maxDay) { setActiveDay(d => d + 1); haptic('light') }
+    }, [activePlan, activeDay]),
+    useCallback(() => {
+      if (activeDay > 0) { setActiveDay(d => d - 1); haptic('light') }
+    }, [activeDay])
+  )
 
   const days = activePlan?.content?.days || []
   const day: DayPlan | undefined = days[activeDay]
@@ -120,19 +134,22 @@ export default function NutritionPage() {
             {activeTab === 'plan' && (
               <>
                 {/* Day selector */}
-                <div className="flex gap-2 overflow-x-auto pb-2">
-                  {days.map((d, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setActiveDay(i)}
-                      className={`flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        activeDay === i ? 'bg-primary-600 text-white' : 'bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--muted)]'
-                      }`}
-                    >
-                      <div className="text-xs opacity-70">დღე {d.day}</div>
-                      <div>{d.day_name}</div>
-                    </button>
-                  ))}
+                <div className="relative">
+                  <div className="flex gap-2 overflow-x-auto pb-2" {...swipeHandlers}>
+                    {days.map((d, i) => (
+                      <button
+                        key={i}
+                        onClick={() => { setActiveDay(i); haptic('light') }}
+                        className={`flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          activeDay === i ? 'bg-primary-600 text-white' : 'bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--muted)]'
+                        }`}
+                      >
+                        <div className="text-xs opacity-70">დღე {d.day}</div>
+                        <div>{d.day_name}</div>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="absolute right-0 top-0 bottom-2 w-10 bg-gradient-to-l from-[var(--background)] to-transparent pointer-events-none" />
                 </div>
 
                 {day && (

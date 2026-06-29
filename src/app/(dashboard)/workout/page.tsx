@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge'
 import type { WorkoutProgram, WorkoutDay } from '@/types/workout'
 import { EXPERIENCE_LABELS } from '@/lib/utils'
 import { WorkoutChecklist } from '@/components/tasks/WorkoutChecklist'
+import { RestTimer } from '@/components/workout/RestTimer'
+import { haptic } from '@/lib/haptic'
 
 export default function WorkoutPage() {
   const [program, setProgram] = useState<WorkoutProgram | null>(null)
@@ -15,6 +17,12 @@ export default function WorkoutPage() {
   const [generating, setGenerating] = useState(false)
   const [type, setType] = useState<'gym' | 'home'>('gym')
   const [activeDay, setActiveDay] = useState(0)
+  const [restTimer, setRestTimer] = useState<{ seconds: number; name: string } | null>(null)
+
+  function startRest(name: string, rest_seconds?: number) {
+    haptic('medium')
+    setRestTimer({ seconds: rest_seconds || 60, name })
+  }
 
   useEffect(() => {
     loadProgram()
@@ -137,15 +145,21 @@ export default function WorkoutPage() {
                           <Badge variant="protein">{ex.reps} გამ</Badge>
                         </div>
                       </div>
-                      <div className="flex gap-4 text-sm text-[var(--muted-foreground)]">
-                        <span>⏸ დასვენება: {ex.rest_seconds}წმ</span>
+                      <div className="flex gap-4 text-sm text-[var(--muted-foreground)] mb-3">
+                        <span>⏸ დასვენება: {ex.rest_seconds || 60}წმ</span>
                         {ex.weight_suggestion && <span>🏋️ {ex.weight_suggestion}</span>}
                       </div>
                       {ex.notes && (
-                        <p className="text-xs text-[var(--muted-foreground)] mt-2 bg-[var(--muted)] rounded p-2">
+                        <p className="text-xs text-[var(--muted-foreground)] mb-3 bg-[var(--muted)] rounded p-2">
                           💡 {ex.notes}
                         </p>
                       )}
+                      <button
+                        onClick={() => startRest(ex.name, ex.rest_seconds)}
+                        className="w-full py-2.5 text-sm font-semibold rounded-xl bg-workout/10 hover:bg-workout/20 active:bg-workout/30 text-workout border border-workout/30 transition-colors flex items-center justify-center gap-2"
+                      >
+                        ✓ სეტი დასრულდა — დასვენება {ex.rest_seconds || 60}წმ
+                      </button>
                     </CardContent>
                   </Card>
                 ))}
@@ -167,6 +181,14 @@ export default function WorkoutPage() {
           </>
         )}
       </div>
+
+      {restTimer && (
+        <RestTimer
+          seconds={restTimer.seconds}
+          exerciseName={restTimer.name}
+          onClose={() => setRestTimer(null)}
+        />
+      )}
     </div>
   )
 }

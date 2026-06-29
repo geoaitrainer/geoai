@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import { InstallBanner } from '@/components/pwa/InstallBanner'
 
 export const metadata: Metadata = {
   title: 'AI ტრენერი',
@@ -20,8 +21,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   themeColor: [
     { media: '(prefers-color-scheme: dark)', color: '#0f1117' },
     { media: '(prefers-color-scheme: light)', color: '#22c55e' },
@@ -40,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="antialiased min-h-screen bg-[var(--background)] text-[var(--foreground)]">
         {children}
+        <InstallBanner />
       </body>
     </html>
   )

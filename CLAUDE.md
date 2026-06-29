@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-All commands run from `trainer-app/`:
+All commands run from the repo root (same directory as `package.json`):
 
 ```bash
 npm run dev        # Start dev server (localhost:3000)
@@ -17,7 +17,7 @@ No test suite. Build is the only gate. Always run `npx tsc --noEmit` after edits
 
 ## Architecture
 
-**Stack:** Next.js 14 (App Router) · TypeScript · TailwindCSS · MongoDB Atlas (Mongoose) · NextAuth.js v5 · OpenRouter API (`google/gemini-2.5-flash-lite`) · Vercel AI SDK v6 · recharts · jsPDF · Resend · web-push
+**Stack:** Next.js 14 (App Router) · TypeScript · TailwindCSS · MongoDB Atlas (Mongoose) · NextAuth.js v5 · OpenRouter API (`google/gemini-2.5-flash-lite`) · Vercel AI SDK v6 · recharts · jsPDF · Resend · web-push · lucide-react
 
 **Language:** All UI, AI prompts, and output are in Georgian (ქართული).
 
@@ -49,6 +49,8 @@ No test suite. Build is the only gate. Always run `npx tsc --noEmit` after edits
 - `(auth)/` — login, register. Both `export const dynamic = 'force-dynamic'`.
 - `(dashboard)/` — Layout calls `auth()`, redirects to `/login` if no session. Pages: `dashboard`, `nutrition`, `nutrition/diary`, `workout`, `progress`, `chat`, `profile`, `calendar`, `recipes`.
 - `admin/` — `is_admin` check in layout. Users page supports create (POST) + cascade-delete (DELETE).
+
+**Route loading states:** Each page route that does async server work should have a co-located `loading.tsx` exporting a skeleton component. Use the `.skeleton` CSS class (defined in `globals.css`) for skeleton elements. See `src/app/(dashboard)/dashboard/loading.tsx` and `src/app/(dashboard)/nutrition/loading.tsx` for the pattern.
 
 ### AI pipeline
 
@@ -124,9 +126,20 @@ All calls via **OpenRouter** (`https://openrouter.ai/api/v1`, model `google/gemi
 
 Dark mode: `.dark` on `<html>`, persisted in `localStorage`, set by inline script in `layout.tsx` before hydration. CSS variables in `globals.css`. Custom Tailwind utilities: `card`, `btn-primary`, `input-field`, `label` (`@layer components`).
 
+**Design tokens** (`globals.css` CSS variables):
+- Base: `--background`, `--foreground`, `--card`, `--card-foreground`, `--border`, `--input`, `--muted`, `--muted-foreground`, `--ring`
+- Semantic: `--destructive`, `--destructive-foreground`, `--destructive-muted` · `--success`, `--success-foreground`, `--success-muted` · `--warning`, `--warning-foreground`, `--warning-muted` · `--info`, `--info-foreground`, `--info-muted`
+- Use semantic variables for error/success/warning/info states instead of bare Tailwind color classes.
+
+**Skeleton loading:** `.skeleton` class applies `bg-[var(--muted)] rounded animate-skeleton`. Use inside `loading.tsx` files for route-level loading states.
+
+**Icons:** Use `lucide-react` for all icons in navigation and UI components. Do not use emoji as icons in `Sidebar.tsx` or `MobileNav.tsx`.
+
 **PostCSS:** `postcss.config.js` (CommonJS, not `.mjs`) with both `tailwindcss: {}` and `autoprefixer: {}`. Both packages must be installed. If CSS returns 404 in dev, delete `.next/` and restart — stale cache or missing autoprefixer causes silent failure.
 
-Mobile nav (`MobileNav.tsx`): 6 items — dashboard, nutrition, calendar, recipes, AI, progress. Dashboard layout: `pb-16 md:pb-0`. Chat: `h-dvh`.
+**Mobile nav** (`MobileNav.tsx`): 5 items — dashboard, nutrition, workout, progress, AI chat. Hidden on `md+`. Dashboard layout: `pb-16 md:pb-0`. Chat: `h-dvh`.
+
+**Sidebar** (`Sidebar.tsx`): 8 items — dashboard, nutrition, workout, calendar, progress, recipes, AI chat, profile. Visible on `md+`. Uses Lucide icons throughout.
 
 ### Key env vars
 
@@ -153,4 +166,4 @@ Deploy command (non-interactive, requires token):
 npx vercel deploy --prod --yes --scope aigeotrainer --token <VERCEL_TOKEN>
 ```
 
-Root Directory on Vercel is `trainer-app/`. All env vars are set on the Vercel project (encrypted). When redeploying after env changes, run deploy again — env vars are read at build time.
+Root Directory on Vercel is set to the repo root. All env vars are set on the Vercel project (encrypted). When redeploying after env changes, run deploy again — env vars are read at build time.

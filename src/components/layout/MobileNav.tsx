@@ -2,15 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { Home, Salad, Dumbbell, TrendingUp, Bot } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
-  { href: '/dashboard', label: 'სახლი', icon: '🏠' },
-  { href: '/nutrition', label: 'კვება', icon: '🥗' },
-  { href: '/calendar', label: 'კალენდარი', icon: '📅' },
-  { href: '/workout', label: 'ვარჯიში', icon: '💪' },
-  { href: '/recipes', label: 'რეცეპტი', icon: '👨‍🍳' },
-  { href: '/chat', label: 'AI', icon: '🤖' },
+  { href: '/dashboard', label: 'სახლი', Icon: Home },
+  { href: '/nutrition', label: 'კვება', Icon: Salad },
+  { href: '/workout', label: 'ვარჯიში', Icon: Dumbbell },
+  { href: '/progress', label: 'პროგრესი', Icon: TrendingUp },
+  { href: '/chat', label: 'AI', Icon: Bot },
 ]
 
 export function MobileNav() {
@@ -27,32 +27,31 @@ export function MobileNav() {
       }}
     >
       <div className="flex justify-around items-end h-14">
-        {navItems.map(item => {
-          const active = pathname === item.href || pathname.startsWith(item.href + '/')
+        {navItems.map(({ href, label, Icon }) => {
+          const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link
-              key={item.href}
-              href={item.href}
+              key={href}
+              href={href}
               className="flex flex-col items-center justify-center gap-0 w-full h-full relative"
             >
               {active && (
                 <span className="absolute top-0 left-1/2 -translate-x-1/2 w-7 h-0.5 bg-primary-500 rounded-b-full" />
               )}
-              <span
+              <Icon
+                size={20}
                 className={cn(
-                  'text-lg leading-none transition-all duration-200',
-                  active ? 'scale-110' : 'scale-100 opacity-55'
+                  'transition-all duration-200',
+                  active ? 'text-primary-500 scale-110' : 'text-[var(--muted-foreground)] scale-100 opacity-55'
                 )}
-              >
-                {item.icon}
-              </span>
+              />
               <span
                 className={cn(
                   'text-[9px] font-medium mt-0.5 leading-none transition-colors',
                   active ? 'text-primary-500' : 'text-[var(--muted-foreground)]'
                 )}
               >
-                {item.label}
+                {label}
               </span>
             </Link>
           )
