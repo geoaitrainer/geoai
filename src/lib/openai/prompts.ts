@@ -127,14 +127,17 @@ export function buildWorkoutPlanPrompt(profile: Profile, type: 'gym' | 'home'): 
 გამოცდილება: ${exp === 'beginner' ? 'დამწყები' : exp === 'intermediate' ? 'საშუალო' : 'პროფესიონალი'}
 ${profile.conditions?.length ? `შეზღუდვები: ${profile.conditions.join(', ')}` : ''}
 
-## სავალდებულო პრინციპები
+## სავალდებულო NSCA პრინციპები
 1. **სპლიტი:** ${split.split} (${split.desc})
-2. **კომპაუნდი პირველი:** ყოველ ვარჯიშის დღეს compound (მრავალსახსრიანი) სავარჯიშოები ბოლოს isolation-ამდე
-3. **მუსკულ ჯგუფის სიხშირე:** თითო მუსკულ ჯგუფი კვირაში 2-ჯერ (${split.split}-სპლიტი ამას ავტომატურად უზრუნველყოფს)
-4. **RPE (Rate of Perceived Exertion):** 1-10 სკალა — დამწყები 6-7, საშუალო 7-8, პროფი 8-9
-5. **Tempo (ეკცენტრიკი-პაუზა-კონცენტრიკი-ზედა):** მაგ. "3-1-2-0" — compound-ებზე, isolation-ზე "2-0-2-0"
-6. **Deload:** duration_weeks-ში ბოლო კვირა = deload (50% მოცულობა, 60% ინტენსივობა)
-7. **Progressive Overload:** კონკრეტული კვირეული პროგრესია (წონა/სეტი/გამეო)
+2. **COMPOUND-FIRST:** Multi-joint სავარჯიშოები (Squat, Deadlift, Press, Row) — ყოველ სესიაზე პირველი, isolation — ბოლოს
+3. **მუსკულ ჯგუფის სიხშირე:** 2x/კვირა თითო ჯგუფი (${split.split} ამას უზრუნველყოფს)
+4. **RPE + RIR:** RPE 1-10 + RIR (Reps in Reserve) — დამწყები RIR 3-4, საშუალო RIR 2-3, პროფი RIR 1-2
+5. **Tempo:** "3-1-2-0" compound-ებზე, "2-0-2-0" isolation-ებზე (ეკცენტრიკი-პაუზა-კონცენტრიკი-ზედა)
+6. **PERIODIZATION ფაზები:**
+   - კვ.1-2: Accumulation (მაღალი მოცულობა, RPE 7, RIR 3)
+   - კვ.3: Intensification (დაბალი მოცულობა, RPE 8-9, RIR 1-2)
+   - კვ.4: Deload (50% სეტები, 60% წონა, RPE ≤6)
+7. **Progressive Overload:** +2.5კგ compound-ებზე ყოველ კვირა, +1 სეტი isolation-ებზე კვ.1→კვ.3
 
 ## სტრუქტურა
 - days: **ყველა 7 დღე** (ვარჯიში + დასვენება)
@@ -164,9 +167,10 @@ ${profile.conditions?.length ? `შეზღუდვები: ${profile.condit
           "reps": "6-8",
           "rest_seconds": 120,
           "rpe": 8,
+          "rir": 2,
           "tempo": "3-1-2-0",
-          "weight_suggestion": "1RM-ის 75% (RPE 8)",
-          "notes": "გულმკერდი სრულ გაჭიმვამდე, ნელი ჩამოშვება"
+          "weight_suggestion": "1RM-ის 75% (RPE 8 / RIR 2)",
+          "notes": "გულმკერდი სრულ გაჭიმვამდე, ნელი ჩამოშვება — ბიომექანიკა > წონა"
         },
         {
           "name": "დუმბელის ბოჭლა",
@@ -175,9 +179,10 @@ ${profile.conditions?.length ? `შეზღუდვები: ${profile.condit
           "reps": "12-15",
           "rest_seconds": 60,
           "rpe": 7,
+          "rir": 3,
           "tempo": "2-0-2-0",
-          "weight_suggestion": "RPE 7 — ბოლო 2 გამეო. ძნელი",
-          "notes": "isolation — ტრიცეფსზე ფოკუსი"
+          "weight_suggestion": "RPE 7 / RIR 3 — ბოლო 3 გამეო. ძნელი",
+          "notes": "isolation — ტრიცეფსზე სრული კონტრაქცია, ნუ გააქანებ"
         }
       ],
       "cooldown": "გაჭიმვა 5 წუთი: მკერდი + ტრიცეფსი",

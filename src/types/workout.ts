@@ -11,6 +11,7 @@ export interface Exercise {
   video_url?: string
   is_compound?: boolean
   rpe?: number
+  rir?: number
   tempo?: string
 }
 

@@ -204,6 +204,7 @@ export default function WorkoutPage() {
                               <Badge variant="success">{ex.sets} სეტი</Badge>
                               <Badge variant="protein">{ex.reps} გამ</Badge>
                               {ex.rpe && <Badge variant="default">RPE {ex.rpe}</Badge>}
+                              {ex.rir !== undefined && <Badge variant="default">RIR {ex.rir}</Badge>}
                             </div>
                           </div>
 
