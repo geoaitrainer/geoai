@@ -16,56 +16,60 @@ export async function GET(req: Request) {
 
   await connectDB()
 
-  const activePlans = await MealPlan.find({ is_active: true }).lean() as Array<{
-    userId: string
-    content: { days: DayMeals[] }
-    createdAt: Date
-  }>
+  // Iterate all registered users
+  const users = await User.find({}).lean() as Array<{ _id: unknown; email: string; name?: string }>
 
   let sent = 0
   const errors: string[] = []
   const today = new Date()
 
-  for (const plan of activePlans) {
+  for (const user of users) {
     try {
-      const userId = plan.userId
-      const [user, profile, workout] = await Promise.all([
-        User.findOne({ _id: userId }).lean() as Promise<{ email: string; name?: string } | null>,
+      if (!user.email) continue
+
+      const userId = String(user._id)
+
+      const [profile, mealPlan, workout] = await Promise.all([
         Profile.findOne({ userId }).lean() as Promise<ProfileLean | null>,
+        MealPlan.findOne({ userId, is_active: true }).lean() as Promise<MealPlanLean | null>,
         WorkoutProgram.findOne({ userId, is_active: true }).lean() as Promise<WorkoutLean | null>,
       ])
 
-      if (!user?.email) continue
+      // Resolve today's meal
+      let mealDay: DayMeals | null = null
+      if (mealPlan?.content?.days?.length) {
+        const daysSince = Math.floor(
+          (today.getTime() - new Date(mealPlan.createdAt).getTime()) / (24 * 60 * 60 * 1000)
+        )
+        mealDay = mealPlan.content.days[daysSince % mealPlan.content.days.length] ?? null
+      }
 
-      const days = plan.content?.days ?? []
-      if (!days.length) continue
-
-      const planCreatedAt = new Date(plan.createdAt)
-      const daysSince = Math.floor((today.getTime() - planCreatedAt.getTime()) / (24 * 60 * 60 * 1000))
-      const mealDay = days[daysSince % days.length]
-
+      // Resolve today's workout
       let workoutDay: WorkoutDayResult = null
       if (workout?.content) {
         const daysPerWeek = workout.content.days_per_week ?? 3
         const workoutDays = workout.content.days ?? []
-        const wDaysSince = Math.floor((today.getTime() - new Date(workout.createdAt).getTime()) / (24 * 60 * 60 * 1000))
+        const wDaysSince = Math.floor(
+          (today.getTime() - new Date(workout.createdAt).getTime()) / (24 * 60 * 60 * 1000)
+        )
         const cycleDay = wDaysSince % 7
         workoutDay = cycleDay < daysPerWeek && workoutDays[cycleDay]
           ? { isRest: false, day: workoutDays[cycleDay] }
           : { isRest: true, day: null }
       }
 
-      await sendDailyPlanEmail(user.email, user.name ?? 'მომხმარებელი', mealDay, workoutDay, profile)
+      // Send even if no plan yet (welcome / reminder email)
+      await sendDailyPlanEmail(user.email, user.name ?? profile?.name ?? 'მომხმარებელი', mealDay, workoutDay, profile)
       sent++
     } catch (err) {
-      errors.push(String(err))
+      errors.push(`${user.email}: ${String(err)}`)
     }
   }
 
   return NextResponse.json({ ok: true, sent, errors: errors.length ? errors : undefined })
 }
 
-// ── Local types ───────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 type WorkoutDayResult = { isRest: boolean; day: WorkoutDay | null } | null
 
@@ -117,6 +121,11 @@ interface ProfileLean {
   protein_g?: number
   fat_g?: number
   carbs_g?: number
+}
+
+interface MealPlanLean {
+  createdAt: Date
+  content: { days: DayMeals[] }
 }
 
 interface WorkoutLean {
