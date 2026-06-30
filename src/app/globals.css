@@ -3,15 +3,19 @@
 @tailwind utilities;
 
 @layer base {
+  /* 60-30-10 rule:
+     60% = --background (dominant canvas)
+     30% = --card / --muted (nav, cards, sections)
+     10% = --ring / primary green (CTA, hovers, badges only) */
   :root {
-    --background: #ffffff;
-    --foreground: #0a0a0a;
-    --card: #ffffff;
-    --card-foreground: #0a0a0a;
-    --border: #e5e7eb;
-    --input: #e5e7eb;
-    --muted: #f9fafb;
-    --muted-foreground: #6b7280;
+    --background: #F3F6FA;
+    --foreground: #0F172A;
+    --card: #FFFFFF;
+    --card-foreground: #0F172A;
+    --border: #DDE3EC;
+    --input: #DDE3EC;
+    --muted: #EBF0F7;
+    --muted-foreground: #5E6E82;
     --ring: #22c55e;
     --primary-gradient: linear-gradient(135deg, #22c55e 0%, #059669 100%);
 
@@ -31,14 +35,14 @@
   }
 
   .dark {
-    --background: #0f1117;
-    --foreground: #f9fafb;
-    --card: #1a1d27;
-    --card-foreground: #f9fafb;
-    --border: #2d3748;
-    --input: #2d3748;
-    --muted: #1e2433;
-    --muted-foreground: #9ca3af;
+    --background: #0C1018;
+    --foreground: #F0F4FA;
+    --card: #141B2D;
+    --card-foreground: #F0F4FA;
+    --border: #1E2D45;
+    --input: #1E2D45;
+    --muted: #182031;
+    --muted-foreground: #8899AA;
     --ring: #22c55e;
     --primary-gradient: linear-gradient(135deg, #22c55e 0%, #059669 100%);
 
@@ -115,6 +119,14 @@
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 9999px; }
 .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
 
 @layer utilities {
   .text-balance { text-wrap: balance; }

@@ -4,6 +4,7 @@ import { connectDB } from '@/lib/mongodb/mongoose'
 import { Profile } from '@/lib/mongodb/models/Profile'
 import { ProgressEntry } from '@/lib/mongodb/models/ProgressEntry'
 import { FoodDiary } from '@/lib/mongodb/models/FoodDiary'
+import { WaterEntry } from '@/lib/mongodb/models/WaterEntry'
 import { TopBar } from '@/components/layout/TopBar'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +13,7 @@ import Link from 'next/link'
 import { WeightChartWrapper } from '@/components/dashboard/WeightChartWrapper'
 import { TaskManagerCard } from '@/components/tasks/TaskManagerCard'
 import { WaterTracker } from '@/components/dashboard/WaterTracker'
+import { CalorieRingCard } from '@/components/dashboard/CalorieRingCard'
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -21,10 +23,11 @@ export default async function DashboardPage() {
   const userId = session.user.id
   const today = new Date().toISOString().split('T')[0]
 
-  const [profile, progress, todayDiary] = await Promise.all([
+  const [profile, progress, todayDiary, waterEntries] = await Promise.all([
     Profile.findOne({ userId }).lean(),
     ProgressEntry.find({ userId }).sort({ date: 1 }).limit(30).select('date weight_kg').lean(),
     FoodDiary.find({ userId, date: today }).select('calories protein_g fat_g carbs_g').lean(),
+    WaterEntry.find({ userId, date: today }).select('amount_ml').lean(),
   ])
 
   if (!profile) redirect('/profile?onboarding=true')
@@ -44,12 +47,27 @@ export default async function DashboardPage() {
   const progressArr = progress as any[]
   const latestWeight = progressArr[progressArr.length - 1]?.weight_kg || p.weight_kg
   const weightDiff = latestWeight - p.weight_kg
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const todayWaterMl = (waterEntries as any[]).reduce((s, e) => s + (e.amount_ml || 0), 0)
 
   return (
     <div className="animate-fade-in">
       <TopBar
         title={`გამარჯობა, ${p.name}! 👋`}
         subtitle={`მიზანი: ${GOAL_LABELS[p.goal]}`}
+      />
+
+      <CalorieRingCard
+        consumed={todayCalories}
+        goal={p.calorie_goal || 2000}
+        protein={todayProtein}
+        proteinGoal={p.protein_g || 150}
+        fat={todayFat}
+        fatGoal={p.fat_g || 70}
+        carbs={todayCarbs}
+        carbsGoal={p.carbs_g || 250}
+        water={todayWaterMl}
+        waterGoal={2500}
       />
 
       <div className="p-4 md:p-6 space-y-4 md:space-y-6">

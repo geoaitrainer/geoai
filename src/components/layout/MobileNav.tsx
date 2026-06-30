@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, Salad, Dumbbell, TrendingUp, Bot } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { motion } from 'framer-motion'
 
 const navItems = [
   { href: '/dashboard', label: 'სახლი', Icon: Home },
@@ -13,46 +14,90 @@ const navItems = [
   { href: '/chat', label: 'AI', Icon: Bot },
 ]
 
-export function MobileNav() {
+interface MobileNavProps {
+  insideFrame?: boolean
+}
+
+export function MobileNav({ insideFrame = false }: MobileNavProps) {
   const pathname = usePathname()
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--border)]"
+      className={cn(
+        'z-50',
+        !insideFrame && 'fixed bottom-0 left-0 right-0',
+        insideFrame && 'relative',
+      )}
       style={{
-        background: 'color-mix(in srgb, var(--card) 90%, transparent)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        background: insideFrame
+          ? 'color-mix(in srgb, var(--card) 80%, transparent)'
+          : 'color-mix(in srgb, var(--card) 88%, transparent)',
+        backdropFilter: 'blur(28px)',
+        WebkitBackdropFilter: 'blur(28px)',
+        borderTop: '0.5px solid rgba(255,255,255,0.07)',
+        paddingBottom: insideFrame ? 0 : 'env(safe-area-inset-bottom, 0px)',
       }}
     >
-      <div className="flex justify-around items-end h-14">
+      <div className="flex justify-around items-center px-1" style={{ height: 60 }}>
         {navItems.map(({ href, label, Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link
               key={href}
               href={href}
-              className="flex flex-col items-center justify-center gap-0 w-full h-full relative"
+              className="relative flex flex-col items-center justify-center gap-[3px] flex-1 h-full py-2 rounded-xl"
             >
+              {/* Sliding active pill */}
               {active && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-7 h-0.5 bg-primary-500 rounded-b-full" />
+                <motion.div
+                  layoutId="nav-active-pill"
+                  className="absolute inset-x-1 inset-y-1 rounded-xl"
+                  style={{ background: 'rgba(200,250,95,0.11)' }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 34 }}
+                />
               )}
-              <Icon
-                size={20}
+
+              {/* Icon */}
+              <motion.div
+                animate={{
+                  scale: active ? 1.08 : 1,
+                  y: active ? -1 : 0,
+                }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                className="relative z-10"
+              >
+                <Icon
+                  size={20}
+                  strokeWidth={active ? 2.2 : 1.8}
+                  className={cn(
+                    'transition-colors duration-150',
+                    active ? 'text-[#C8FA5F]' : 'text-[var(--muted-foreground)] opacity-60'
+                  )}
+                />
+              </motion.div>
+
+              {/* Label */}
+              <motion.span
+                animate={{ opacity: active ? 1 : 0.5 }}
+                transition={{ duration: 0.15 }}
                 className={cn(
-                  'transition-all duration-200',
-                  active ? 'text-primary-500 scale-110' : 'text-[var(--muted-foreground)] scale-100 opacity-55'
+                  'relative z-10 leading-none font-medium',
+                  active ? 'text-[#C8FA5F]' : 'text-[var(--muted-foreground)]'
                 )}
-              />
-              <span
-                className={cn(
-                  'text-[9px] font-medium mt-0.5 leading-none transition-colors',
-                  active ? 'text-primary-500' : 'text-[var(--muted-foreground)]'
-                )}
+                style={{ fontSize: 9 }}
               >
                 {label}
-              </span>
+              </motion.span>
+
+              {/* Active dot */}
+              {active && (
+                <motion.div
+                  layoutId="nav-dot"
+                  className="absolute bottom-[6px] rounded-full"
+                  style={{ width: 3, height: 3, background: '#C8FA5F' }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 34 }}
+                />
+              )}
             </Link>
           )
         })}
