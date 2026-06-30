@@ -119,7 +119,11 @@ export function buildWorkoutPlanPrompt(profile: Profile, type: 'gym' | 'home'): 
 გამოცდილება: ${profile.experience === 'beginner' ? 'დამწყები' : profile.experience === 'intermediate' ? 'საშუალო' : 'პროფესიონალი'}
 ${profile.conditions?.length ? `შეზღუდვები: ${profile.conditions.join(', ')}` : ''}
 
-მოთხოვნა: ყველა ტექსტი (name, description, day_name, warmup, cooldown, notes, progression_notes) დაწერე ქართულ ენაზე.
+მოთხოვნები:
+- ყველა ტექსტი ქართულად (name, description, day_name, warmup, cooldown, notes, progression_notes, rest_activities)
+- days მასივი შეიცავს ყველა 7 დღეს (კვირის სრული ციკლი)
+- ვარჯიშის დღეები: is_rest = false, ავსებ exercises-ს
+- დასვენების დღეები: is_rest = true, exercises = [], ავსებ rest_activities-ს შემდეგი ვარიანტებიდან: ცურვა, სეირნობა, განტვირთვა, წიგნის კითხვა, მედიტაცია, გაჭიმვა
 
 დააბრუნე JSON:
 {
@@ -131,6 +135,7 @@ ${profile.conditions?.length ? `შეზღუდვები: ${profile.condit
     {
       "day_number": 1,
       "day_name": "მკერდი და ტრიცეფსი",
+      "is_rest": false,
       "muscle_groups": ["მკერდი", "ტრიცეფსი"],
       "warmup": "5 წუთი ელფსური",
       "exercises": [
@@ -145,6 +150,19 @@ ${profile.conditions?.length ? `შეზღუდვები: ${profile.condit
       ],
       "cooldown": "გაჭიმვა 5 წუთი",
       "duration_minutes": 60
+    },
+    {
+      "day_number": 2,
+      "day_name": "სამშაბათი — დასვენება",
+      "is_rest": true,
+      "muscle_groups": [],
+      "exercises": [],
+      "duration_minutes": 30,
+      "rest_activities": [
+        { "name": "სეირნობა", "duration": "30 წუთი", "notes": "მსუბუქი ტემპი, სუფთა ჰაერზე" },
+        { "name": "წიგნის კითხვა", "duration": "1 საათი", "notes": "მოდუნება და ტვინის განტვირთვა" }
+      ],
+      "rest_notes": "დღეს სხეული განახლდება — ენერგია ნახვამდე!"
     }
   ],
   "progression_notes": "ყოველ 2 კვირაში გაზარდე დატვირთვა 5-10%"

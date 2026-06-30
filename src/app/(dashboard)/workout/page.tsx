@@ -107,67 +107,120 @@ export default function WorkoutPage() {
                   key={i}
                   onClick={() => setActiveDay(i)}
                   className={`flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeDay === i ? 'bg-primary-600 text-white' : 'bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--muted)]'
+                    activeDay === i
+                      ? d.is_rest ? 'bg-blue-500 text-white' : 'bg-primary-600 text-white'
+                      : 'bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--muted)]'
                   }`}
                 >
                   <div className="text-xs opacity-70">დღე {d.day_number}</div>
-                  <div className="text-xs">{d.day_name}</div>
+                  <div className="text-xs">{d.is_rest ? '💤 დასვენება' : d.day_name}</div>
                 </button>
               ))}
             </div>
 
             {day && (
               <div className="space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  {day.muscle_groups.map(mg => <Badge key={mg} variant="protein">{mg}</Badge>)}
-                  <Badge variant="default">⏱ {day.duration_minutes} წუთი</Badge>
-                </div>
-
-                <WorkoutChecklist
-                  dayIndex={activeDay}
-                  exercises={day.exercises}
-                  dayName={day.day_name}
-                />
-
-                {day.warmup && (
-                  <div className="bg-orange-50 dark:bg-orange-900/10 rounded-xl p-4 text-sm">
-                    <span className="font-medium">🔥 გახურება: </span>{day.warmup}
-                  </div>
-                )}
-
-                {day.exercises.map((ex, i) => (
-                  <Card key={i}>
-                    <CardContent className="pt-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <h4 className="font-semibold">{i + 1}. {ex.name}</h4>
-                        <div className="flex gap-1">
-                          <Badge variant="success">{ex.sets} სეტი</Badge>
-                          <Badge variant="protein">{ex.reps} გამ</Badge>
-                        </div>
-                      </div>
-                      <div className="flex gap-4 text-sm text-[var(--muted-foreground)] mb-3">
-                        <span>⏸ დასვენება: {ex.rest_seconds || 60}წმ</span>
-                        {ex.weight_suggestion && <span>🏋️ {ex.weight_suggestion}</span>}
-                      </div>
-                      {ex.notes && (
-                        <p className="text-xs text-[var(--muted-foreground)] mb-3 bg-[var(--muted)] rounded p-2">
-                          💡 {ex.notes}
-                        </p>
+                {day.is_rest ? (
+                  /* ── Rest day ── */
+                  <>
+                    <div className="bg-blue-50 dark:bg-blue-900/10 rounded-2xl p-6 text-center">
+                      <p className="text-4xl mb-3">💤</p>
+                      <h3 className="font-semibold text-lg mb-1">{day.day_name}</h3>
+                      {day.rest_notes && (
+                        <p className="text-sm text-[var(--muted-foreground)]">{day.rest_notes}</p>
                       )}
-                      <button
-                        onClick={() => startRest(ex.name, ex.rest_seconds)}
-                        className="w-full py-2.5 text-sm font-semibold rounded-xl bg-workout/10 hover:bg-workout/20 active:bg-workout/30 text-workout border border-workout/30 transition-colors flex items-center justify-center gap-2"
-                      >
-                        ✓ სეტი დასრულდა — დასვენება {ex.rest_seconds || 60}წმ
-                      </button>
-                    </CardContent>
-                  </Card>
-                ))}
+                    </div>
 
-                {day.cooldown && (
-                  <div className="bg-blue-50 dark:bg-blue-900/10 rounded-xl p-4 text-sm">
-                    <span className="font-medium">🧘 გაგრილება: </span>{day.cooldown}
-                  </div>
+                    {day.rest_activities && day.rest_activities.length > 0 && (
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-sm text-[var(--muted-foreground)] uppercase tracking-wide">დღის აქტივობები</h4>
+                        {day.rest_activities.map((act, i) => {
+                          const icons: Record<string, string> = {
+                            'ცურვა': '🏊',
+                            'სეირნობა': '🚶',
+                            'განტვირთვა': '🛁',
+                            'წიგნის კითხვა': '📚',
+                            'მედიტაცია': '🧘',
+                            'გაჭიმვა': '🤸',
+                          }
+                          const icon = Object.entries(icons).find(([k]) => act.name.includes(k))?.[1] ?? '✨'
+                          return (
+                            <Card key={i}>
+                              <CardContent className="pt-4">
+                                <div className="flex items-start gap-3">
+                                  <span className="text-2xl">{icon}</span>
+                                  <div className="flex-1">
+                                    <div className="flex items-center justify-between">
+                                      <h4 className="font-semibold">{act.name}</h4>
+                                      {act.duration && <Badge variant="default">⏱ {act.duration}</Badge>}
+                                    </div>
+                                    {act.notes && (
+                                      <p className="text-sm text-[var(--muted-foreground)] mt-1">{act.notes}</p>
+                                    )}
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  /* ── Workout day ── */
+                  <>
+                    <div className="flex flex-wrap gap-2">
+                      {day.muscle_groups?.map(mg => <Badge key={mg} variant="protein">{mg}</Badge>)}
+                      <Badge variant="default">⏱ {day.duration_minutes} წუთი</Badge>
+                    </div>
+
+                    <WorkoutChecklist
+                      dayIndex={activeDay}
+                      exercises={day.exercises}
+                      dayName={day.day_name}
+                    />
+
+                    {day.warmup && (
+                      <div className="bg-orange-50 dark:bg-orange-900/10 rounded-xl p-4 text-sm">
+                        <span className="font-medium">🔥 გახურება: </span>{day.warmup}
+                      </div>
+                    )}
+
+                    {day.exercises.map((ex, i) => (
+                      <Card key={i}>
+                        <CardContent className="pt-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <h4 className="font-semibold">{i + 1}. {ex.name}</h4>
+                            <div className="flex gap-1">
+                              <Badge variant="success">{ex.sets} სეტი</Badge>
+                              <Badge variant="protein">{ex.reps} გამ</Badge>
+                            </div>
+                          </div>
+                          <div className="flex gap-4 text-sm text-[var(--muted-foreground)] mb-3">
+                            <span>⏸ დასვენება: {ex.rest_seconds || 60}წმ</span>
+                            {ex.weight_suggestion && <span>🏋️ {ex.weight_suggestion}</span>}
+                          </div>
+                          {ex.notes && (
+                            <p className="text-xs text-[var(--muted-foreground)] mb-3 bg-[var(--muted)] rounded p-2">
+                              💡 {ex.notes}
+                            </p>
+                          )}
+                          <button
+                            onClick={() => startRest(ex.name, ex.rest_seconds)}
+                            className="w-full py-2.5 text-sm font-semibold rounded-xl bg-workout/10 hover:bg-workout/20 active:bg-workout/30 text-workout border border-workout/30 transition-colors flex items-center justify-center gap-2"
+                          >
+                            ✓ სეტი დასრულდა — დასვენება {ex.rest_seconds || 60}წმ
+                          </button>
+                        </CardContent>
+                      </Card>
+                    ))}
+
+                    {day.cooldown && (
+                      <div className="bg-blue-50 dark:bg-blue-900/10 rounded-xl p-4 text-sm">
+                        <span className="font-medium">🧘 გაგრილება: </span>{day.cooldown}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}

@@ -11,14 +11,23 @@ export interface Exercise {
   video_url?: string
 }
 
+export interface RestActivity {
+  name: string
+  duration?: string
+  notes?: string
+}
+
 export interface WorkoutDay {
   day_number: number
   day_name: string
+  is_rest: boolean
   muscle_groups: string[]
   exercises: Exercise[]
   warmup?: string
   cooldown?: string
   duration_minutes: number
+  rest_activities?: RestActivity[]
+  rest_notes?: string
 }
 
 export interface WorkoutProgram {
