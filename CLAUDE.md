@@ -15,9 +15,16 @@ npx tsc --noEmit   # Type-check only
 
 No test suite. Build is the only gate. Always run `npx tsc --noEmit` after edits before claiming done.
 
+**Deploy (requires token):**
+```bash
+npx vercel link --yes --scope aigeotrainer --token <TOKEN>
+npx vercel deploy --prod --yes --token <TOKEN>
+npx vercel env add <NAME> production --token <TOKEN>   # add env var non-interactively via echo pipe
+```
+
 ## Architecture
 
-**Stack:** Next.js 14 (App Router) · TypeScript · TailwindCSS · MongoDB Atlas (Mongoose) · NextAuth.js v5 · OpenRouter API (`google/gemini-2.5-flash-lite`) · Vercel AI SDK v6 · recharts · jsPDF · Resend · web-push · lucide-react
+**Stack:** Next.js 14 (App Router) · TypeScript · TailwindCSS · MongoDB Atlas (Mongoose) · NextAuth.js v5 · OpenRouter API (`google/gemini-2.5-flash-lite`) · Vercel AI SDK v6 · recharts · jsPDF · Resend · nodemailer (Gmail) · web-push · lucide-react
 
 **Language:** All UI, AI prompts, and output are in Georgian (ქართული).
 
@@ -27,132 +34,138 @@ No test suite. Build is the only gate. Always run `npx tsc --noEmit` after edits
 
 ### Auth — NextAuth v5 (JWT, Credentials-only)
 
-- `src/auth.config.ts` — Edge-compatible config. Protected paths: `/dashboard`, `/nutrition`, `/workout`, `/progress`, `/chat`, `/profile`, `/admin`, `/recipes`, `/calendar`.
-- `src/auth.ts` — Credentials provider only (bcrypt).
+- `src/auth.config.ts` — Edge-compatible config. Protected paths: `/dashboard`, `/nutrition`, `/workout`, `/progress`, `/chat`, `/profile`, `/admin`, `/recipes`, `/calendar`. Auth pages (not redirected when logged in): `/login`, `/register`, `/admin-login`, `/forgot-password`.
+- `src/auth.ts` — Credentials provider. Two paths:
+  - **Normal:** `email` + `password` → bcrypt compare
+  - **Admin OTP:** `email` + `adminOtp` → validates `AuthToken` (type `admin_otp`, not used, not expired)
 - `session.user.id` = MongoDB `_id.toString()`.
 
 **Admin access:** `Profile.is_admin: true`. `src/app/admin/layout.tsx` redirects non-admins. `PUT /api/profile` strips `is_admin`/`plan`/`userId` — users cannot self-elevate.
 
-**First-time admin setup:** POST `/api/setup-admin` with `{ email, secret }`. Secret defaults to `geoai-admin-2026` or `ADMIN_SETUP_SECRET` env var. Run once after registering.
+**First-time admin setup:** `POST /api/setup-admin` with `{ email, secret }`. Secret defaults to `geoai-admin-2026` or `ADMIN_SETUP_SECRET` env var.
+
+**Password reset flow:** `POST /api/auth/forgot-password` → checks user exists → saves `AuthToken` (type `password_reset`, 1h TTL) → sends Gmail link. `POST /api/auth/reset-password` → validates token → bcrypt hashes new password → marks token used.
+
+**Admin OTP flow:** `POST /api/auth/admin-otp` → checks user exists + `Profile.is_admin` → deletes old OTPs → generates 6-digit OTP using `crypto.randomInt` → saves `AuthToken` (type `admin_otp`, 10min TTL) → sends Gmail. Verify via `signIn('credentials', { email, adminOtp })`.
 
 ### MongoDB / Mongoose
 
 - `src/lib/mongodb/mongoose.ts` — singleton `connectDB()`. Overrides `dns.promises` to `8.8.8.8` (Atlas SRV fix).
-- Models in `src/lib/mongodb/models/`: `User`, `Profile`, `MealPlan`, `FoodDiary`, `WorkoutProgram`, `ProgressEntry`, `ChatMessage`, `Task`, `WaterEntry`, `PushSubscription`.
+- Models in `src/lib/mongodb/models/`: `User`, `Profile`, `MealPlan`, `FoodDiary`, `WorkoutProgram`, `ProgressEntry`, `ChatMessage`, `Task`, `WaterEntry`, `PushSubscription`, `AuthToken`.
 - All models use `userId: String` (not ObjectId refs).
 - Always `.lean()` for reads; `JSON.parse(JSON.stringify(doc))` before returning from API routes.
 - Active plans: `is_active: Boolean`. Always `updateMany({ userId, type }, { is_active: false })` before inserting a new plan.
 - Mongoose strict mode silently drops unknown fields — add new fields to schema before saving.
 
+**`AuthToken` model:** `{ email, token, type ('password_reset'|'admin_otp'), expiresAt, used }`. TTL index on `expiresAt` (`expireAfterSeconds: 0`) — MongoDB auto-deletes expired tokens.
+
 ### Route groups
 
-- `(auth)/` — login, register. Both `export const dynamic = 'force-dynamic'`.
+- `(auth)/` — `login`, `register`, `forgot-password`, `reset-password`, `admin-login`. All `export const dynamic = 'force-dynamic'`.
 - `(dashboard)/` — Layout calls `auth()`, redirects to `/login` if no session. Pages: `dashboard`, `nutrition`, `nutrition/diary`, `workout`, `progress`, `chat`, `profile`, `calendar`, `recipes`.
 - `admin/` — `is_admin` check in layout. Users page supports create (POST) + cascade-delete (DELETE).
 
-**Route loading states:** Each page route that does async server work should have a co-located `loading.tsx` exporting a skeleton component. Use the `.skeleton` CSS class (defined in `globals.css`) for skeleton elements. See `src/app/(dashboard)/dashboard/loading.tsx` and `src/app/(dashboard)/nutrition/loading.tsx` for the pattern.
+**Route loading states:** Co-located `loading.tsx` with `.skeleton` CSS class. See `src/app/(dashboard)/dashboard/loading.tsx` for the pattern.
 
 ### AI pipeline
 
 All calls via **OpenRouter** (`https://openrouter.ai/api/v1`, model `google/gemini-2.5-flash-lite`).
 
 - `src/lib/openai/client.ts` — module-level instantiation. Missing `OPENROUTER_API_KEY` at build time fails the build.
-- `src/lib/openai/prompts.ts` — `buildChatSystemPrompt` is **profile-adaptive**: injects goal, BMI, macros, experience, food preferences, and summaries of active meal/workout plans. Each prompt function is named `build*Prompt`.
+- `src/lib/openai/prompts.ts` — all `build*Prompt` functions. `buildChatSystemPrompt` is profile-adaptive. `buildWorkoutPlanPrompt` selects split strategy by experience level (Full Body / Upper-Lower / PPL).
 - `src/lib/openai/safety.ts` — Georgian medical keyword filter, runs before AI call.
 
 | Route | Method | Description |
 |---|---|---|
 | `/api/ai/chat` | POST stream | `streamText`. Loads Profile + active plans → adaptive system prompt. |
 | `/api/ai/meal-plan` | GET/POST | 7 or 30-day meal plan (JSON). |
-| `/api/ai/workout-plan` | GET/POST | Gym or home workout program (JSON). |
+| `/api/ai/workout-plan` | GET/POST | Gym or home workout program (JSON). `max_tokens: 8000`. NSCA CSCS system prompt. |
 | `/api/ai/food-lookup` | POST | `{ food_name, amount_g }` → macros. |
 | `/api/ai/nutrition-analysis` | GET | Diary analysis for `?date=YYYY-MM-DD`. |
 | `/api/ai/recipe` | POST | `{ ingredients }` → full recipe + macros per serving (JSON). |
+| `/api/auth/forgot-password` | POST | Check user exists → send Gmail reset link. |
+| `/api/auth/reset-password` | POST | Validate token → update password. |
+| `/api/auth/admin-otp` | POST | Check admin → send 6-digit OTP via Gmail. |
+| `/api/cron/daily-email` | GET | Vercel Cron (06:00 UTC = 10:00 Tbilisi). Sends daily meal+workout plan to all users. Auth: `Authorization: Bearer ${CRON_SECRET}` (skip in `NODE_ENV=development`). |
 | `/api/calendar` | GET | Active plans + diary/progress dates for `?month=YYYY-MM`. |
-| `/api/tasks` | GET/POST/PATCH/DELETE | Task manager CRUD. |
-| `/api/water` | GET/POST/DELETE | Daily water intake. GET: `?date=` → `{ total_ml, entries }`. DELETE resets day. |
-| `/api/progress` | GET/POST | Body measurements (weight, waist, chest, biceps). |
-| `/api/email/weekly-report` | POST | Sends 7-day summary HTML email via Resend to session user's email. |
-| `/api/push` | GET/POST/DELETE | VAPID public key (GET), save subscription (POST), remove (DELETE). |
-| `/api/admin/users` | GET/POST/PUT/DELETE | List, create, update plan, cascade-delete users. |
-| `/api/admin/stats` | GET | KPIs + 14-day registration/chat trends + plan distribution for charts. |
+| `/api/tasks` | GET/POST/PATCH/DELETE | Task manager CRUD. `meta` field is `Mixed` — workout tasks store `{ day_index, sets, reps, weight_used }`. |
+| `/api/water` | GET/POST/DELETE | Daily water intake. |
+| `/api/progress` | GET/POST | Body measurements. |
+| `/api/email/weekly-report` | POST | Sends 7-day summary via Resend. |
+| `/api/push` | GET/POST/DELETE | Web push subscription management. |
+| `/api/admin/users` | GET/POST/PUT/DELETE | User management. |
+| `/api/admin/stats` | GET | KPIs + charts data. |
 
-### Georgian Food Database
+### Workout Plan — NSCA CSCS System
 
-`src/data/georgian-foods.ts` — static array of 50+ Georgian foods with `{ name, category, calories, protein_g, fat_g, carbs_g, serving, amount_g }`. `searchGeorgianFoods(query)` returns up to 8 matches. Used in `/nutrition/diary` for offline instant search (no AI needed). AI food-lookup is secondary, for non-Georgian foods.
+`buildWorkoutPlanPrompt` enforces:
+- **Split by experience:** beginner → Full Body 3x, intermediate → Upper/Lower 4x, advanced → PPL 6x
+- **Compound-first:** multi-joint movements before isolation every session
+- **Periodization:** Accumulation (kw.1-2, RPE 7, RIR 3) → Intensification (kw.3, RPE 8-9, RIR 1-2) → Deload (kw.4, 50% volume)
+- **Per-exercise fields:** `is_compound`, `rpe` (1-10), `rir` (Reps in Reserve), `tempo` ("3-1-2-0"), `weight_suggestion`
+- **All 7 days** in `days[]` with `is_rest: true/false`. Rest days have `rest_activities[]` (ცურვა, სეირნობა, განტვირთვა, წიგნის კითხვა).
+- **Program fields:** `split_type`, `deload_week`, `days_per_week`, `duration_weeks`
 
-### Water Tracking
+`WorkoutChecklist.tsx` supports per-exercise weight logging stored in `task.meta.weight_used`.
 
-`WaterEntry` model: `{ userId, date (YYYY-MM-DD), amount_ml }`. Dashboard widget `src/components/dashboard/WaterTracker.tsx` — SVG ring, goal 2500ml, quick-add buttons (+200/250/300/500ml).
+### Email
 
-### Recipe Generator
+Two email providers:
 
-`/recipes` page + `/api/ai/recipe` — user enters ingredients, AI returns `{ name, servings, prep_minutes, cook_minutes, ingredients[], steps[], nutrition_per_serving, tips }`.
+**Nodemailer (Gmail)** — `src/lib/email/nodemailer.ts`. Used for: password reset, admin OTP, daily plan email. `nodemailer` must be in `serverComponentsExternalPackages` in `next.config.mjs` (uses Node.js `net`/`tls` built-ins).
 
-### PDF Export
+**Resend** — `src/lib/email/resend.ts`. Used for: weekly nutrition report only.
 
-`src/lib/pdf/export.ts` — client-side only (`'use client'`). Two functions: `exportProgressPDF(name, entries)` and `exportMealPlanPDF(name, days)`. Dynamically imports `jspdf` to avoid SSR issues. Called from progress and nutrition pages.
+### Vercel Cron Job
 
-### Analytics (Admin)
-
-`src/components/admin/AnalyticsCharts.tsx` — client component, fetches `/api/admin/stats`. Renders: KPI cards, 14-day registration bar chart, 14-day AI chat line chart, plan distribution pie chart. All via recharts.
-
-### Email — Resend
-
-`src/lib/email/resend.ts` — lazy singleton `getResend()` (throws if `RESEND_API_KEY` missing at runtime, not build time). `buildWeeklyReportHtml()` produces HTML email. Trigger: POST `/api/email/weekly-report` from progress page.
-
-### Push Notifications
-
-`public/sw.js` — service worker handles `push` event and `notificationclick`. Registered client-side in `PushNotificationSetup.tsx`. VAPID keys in env vars. `PushSubscription` model stores per-user subscription. Setup UI lives on `/profile` page.
-
-### Task Manager
-
-`Task` model: `{ userId, type (nutrition|shopping|workout), title, date (YYYY-MM-DD), completed, order, meta }`.
-
-- `TaskManagerCard.tsx` — Dashboard widget. Nutrition tasks auto-seed from today's meal plan day. Shopping list is persistent.
-- `WorkoutChecklist.tsx` — Workout page. Seeds exercises as tasks per `date+day_index`.
+`vercel.json` at repo root defines cron: `GET /api/cron/daily-email` at `0 6 * * *` (10:00 Tbilisi). Iterates all `User` documents → for each user fetches active `MealPlan` + `WorkoutProgram` → calculates today's day index → sends HTML email via Gmail. `CRON_SECRET` env var required in production (Vercel sets it automatically after first deploy with `vercel.json`).
 
 ### Calendar date mapping
 
-`/calendar` maps plan days to real calendar dates client-side:
-- **Meal plan:** `dayIndex = daysSincePlanCreation % plan.days.length`
-- **Workout:** within each 7-day cycle, first `days_per_week` days = workout, rest = rest.
+- **Meal plan:** `dayIndex = floor((now - createdAt) / 86400000) % days.length`
+- **Workout:** `cycleDay = daysSince % 7`. If `cycleDay < days_per_week` → workout day at `workoutDays[cycleDay]`, else → rest.
+
+### Georgian Food Database
+
+`src/data/georgian-foods.ts` — 50+ Georgian foods. `searchGeorgianFoods(query)` returns up to 8 matches. Used in `/nutrition/diary` for instant offline search.
 
 ### Fitness calculations
 
-`src/lib/calculations/` — `bmr.ts` (Mifflin-St Jeor), `tdee.ts` (BMR × multiplier), `macros.ts` (goal split). `PUT /api/profile` and `POST /api/profile/calculate` recalculate all four.
+`src/lib/calculations/` — `bmr.ts` (Mifflin-St Jeor), `tdee.ts` (BMR × activity multiplier), `macros.ts` (goal-based split). Triggered by `PUT /api/profile` and `POST /api/profile/calculate`.
+
+### PDF Export
+
+`src/lib/pdf/export.ts` — client-side only (`'use client'`). Dynamically imports `jspdf`. `exportProgressPDF` + `exportMealPlanPDF`.
 
 ### Styling
 
-Dark mode: `.dark` on `<html>`, persisted in `localStorage`, set by inline script in `layout.tsx` before hydration. CSS variables in `globals.css`. Custom Tailwind utilities: `card`, `btn-primary`, `input-field`, `label` (`@layer components`).
+Dark mode: `.dark` on `<html>`, persisted in `localStorage`, set by inline script in `layout.tsx` before hydration.
 
-**Design tokens** (`globals.css` CSS variables):
-- Base: `--background`, `--foreground`, `--card`, `--card-foreground`, `--border`, `--input`, `--muted`, `--muted-foreground`, `--ring`
-- Semantic: `--destructive`, `--destructive-foreground`, `--destructive-muted` · `--success`, `--success-foreground`, `--success-muted` · `--warning`, `--warning-foreground`, `--warning-muted` · `--info`, `--info-foreground`, `--info-muted`
-- Use semantic variables for error/success/warning/info states instead of bare Tailwind color classes.
+**Design tokens** (`globals.css` CSS variables): `--background`, `--foreground`, `--card`, `--border`, `--muted`, `--muted-foreground`. Semantic: `--destructive`, `--success`, `--warning`, `--info` (each with `-foreground` and `-muted` variants). Use semantic variables for state colors — not bare Tailwind classes.
 
-**Skeleton loading:** `.skeleton` class applies `bg-[var(--muted)] rounded animate-skeleton`. Use inside `loading.tsx` files for route-level loading states.
+**Skeleton loading:** `.skeleton` class → `bg-[var(--muted)] rounded animate-skeleton`. Use in `loading.tsx` files.
 
-**Icons:** Use `lucide-react` for all icons in navigation and UI components. Do not use emoji as icons in `Sidebar.tsx` or `MobileNav.tsx`.
+**Icons:** `lucide-react` everywhere in nav/UI. No emoji in `Sidebar.tsx` or `MobileNav.tsx`.
 
-**PostCSS:** `postcss.config.js` (CommonJS, not `.mjs`) with both `tailwindcss: {}` and `autoprefixer: {}`. Both packages must be installed. If CSS returns 404 in dev, delete `.next/` and restart — stale cache or missing autoprefixer causes silent failure.
+**PostCSS:** `postcss.config.js` (CommonJS). If CSS 404s in dev → delete `.next/` and restart.
 
-**Mobile nav** (`MobileNav.tsx`): 5 items — dashboard, nutrition, workout, progress, AI chat. Hidden on `md+`. Dashboard layout: `pb-16 md:pb-0`. Chat: `h-dvh`.
-
-**Sidebar** (`Sidebar.tsx`): 8 items — dashboard, nutrition, workout, calendar, progress, recipes, AI chat, profile. Visible on `md+`. Uses Lucide icons throughout.
+**Mobile nav** (`MobileNav.tsx`): 5 items, hidden on `md+`. **Sidebar** (`Sidebar.tsx`): 8 items, visible on `md+`.
 
 ### Key env vars
 
 ```
 MONGODB_URI            # mongodb+srv://... Atlas SRV
 AUTH_SECRET            # 32+ char random — JWT signing
-NEXTAUTH_URL           # must match production domain exactly — mismatch breaks session cookies
-OPENROUTER_API_KEY     # sk-or-v1-... — missing at build time fails build
+NEXTAUTH_URL           # must match production domain exactly
+OPENROUTER_API_KEY     # missing at build time fails build
 NEXT_PUBLIC_APP_URL    # HTTP-Referer sent to OpenRouter
-VAPID_PUBLIC_KEY       # web-push VAPID public key
-VAPID_PRIVATE_KEY      # web-push VAPID private key
-RESEND_API_KEY         # resend.com — missing causes runtime 503, not build failure
-ADMIN_SETUP_SECRET     # optional — overrides default "geoai-admin-2026" for /api/setup-admin
+GMAIL_USER             # geoaitrainer@gmail.com
+GMAIL_APP_PASSWORD     # Gmail app password (no spaces) — nodemailer auth
+VAPID_PUBLIC_KEY       # web-push
+VAPID_PRIVATE_KEY      # web-push
+RESEND_API_KEY         # weekly report only — missing causes runtime 503
+CRON_SECRET            # Vercel sets automatically; protects /api/cron/daily-email
+ADMIN_SETUP_SECRET     # optional — overrides default "geoai-admin-2026"
 ```
 
 ### Deployment (Vercel)
@@ -161,9 +174,4 @@ ADMIN_SETUP_SECRET     # optional — overrides default "geoai-admin-2026" for /
 |---|---|---|---|
 | `geoaitrainer` | `aigeotrainer` (`team_FAb234VDVF8qflYGXQ4rzVsL`) | `trainer-app` (`prj_MMSdFbnzvP2Z5n4EUERNn6SmK08h`) | `https://geotraener.vercel.app` |
 
-Deploy command (non-interactive, requires token):
-```bash
-npx vercel deploy --prod --yes --scope aigeotrainer --token <VERCEL_TOKEN>
-```
-
-Root Directory on Vercel is set to the repo root. All env vars are set on the Vercel project (encrypted). When redeploying after env changes, run deploy again — env vars are read at build time.
+CLI is authenticated as `trendorage-7009` (different account) — always pass `--token <VERCEL_TOKEN>` for `aigeotrainer` operations. Root Directory on Vercel = repo root.
