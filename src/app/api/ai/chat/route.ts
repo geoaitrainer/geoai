@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     (activeWorkout as any) || null
   )
 
-  ChatMessage.create({ userId, role: 'user', content: lastMessage }).catch(() => {})
+  ChatMessage.create({ userId, role: 'user', content: lastMessage }).catch(err => console.error('chat save error:', err))
 
   const result = streamText({
     model: openrouter('google/gemini-2.5-flash-lite'),

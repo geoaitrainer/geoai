@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import crypto from 'crypto'
 import { connectDB } from '@/lib/mongodb/mongoose'
 import { User } from '@/lib/mongodb/models/User'
 import { Profile } from '@/lib/mongodb/models/Profile'
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
     // Delete old OTPs for this email
     await AuthToken.deleteMany({ email, type: 'admin_otp' })
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString()
+    const otp = crypto.randomInt(100000, 1000000).toString()
     await AuthToken.create({
       email,
       token: otp,

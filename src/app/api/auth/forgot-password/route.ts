@@ -11,24 +11,27 @@ export async function POST(req: Request) {
     if (!email) return NextResponse.json({ error: 'ელფოსტა სავალდებულოა' }, { status: 400 })
 
     await connectDB()
-    const user = await User.findOne({ email: email.toLowerCase().trim() }).lean() as { _id: unknown } | null
+    const normalizedEmail = email.toLowerCase().trim()
+    const user = await User.findOne({ email: normalizedEmail }).lean() as { _id: unknown } | null
+
+    // Always return success to prevent email enumeration
     if (!user) {
-      return NextResponse.json({ error: 'ამ ელფოსტით მომხმარებელი არ არის რეგისტრირებული' }, { status: 404 })
+      return NextResponse.json({ ok: true })
     }
 
     // Delete old reset tokens for this email
-    await AuthToken.deleteMany({ email, type: 'password_reset' })
+    await AuthToken.deleteMany({ email: normalizedEmail, type: 'password_reset' })
 
     const token = crypto.randomBytes(32).toString('hex')
     await AuthToken.create({
-      email,
+      email: normalizedEmail,
       token,
       type: 'password_reset',
       expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
     })
 
     const resetUrl = `${process.env.NEXTAUTH_URL}/reset-password?token=${token}`
-    await sendPasswordResetEmail(email, resetUrl)
+    await sendPasswordResetEmail(normalizedEmail, resetUrl)
 
     return NextResponse.json({ ok: true })
   } catch (err) {

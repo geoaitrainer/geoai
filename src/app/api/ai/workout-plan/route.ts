@@ -45,9 +45,13 @@ export async function POST(request: NextRequest) {
     const content = completion.choices[0]?.message?.content
     if (!content) return NextResponse.json({ error: 'AI error' }, { status: 500 })
 
-    const programData = JSON.parse(content)
+    let programData
+    try {
+      programData = JSON.parse(content)
+    } catch {
+      return NextResponse.json({ error: 'AI returned invalid format' }, { status: 502 })
+    }
 
-    await WorkoutProgram.updateMany({ userId, type }, { is_active: false })
     const saved = await WorkoutProgram.create({
       userId, type,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -55,6 +59,7 @@ export async function POST(request: NextRequest) {
       content: programData,
       is_active: true,
     })
+    await WorkoutProgram.updateMany({ userId, type, _id: { $ne: saved._id } }, { is_active: false })
 
     return NextResponse.json(JSON.parse(JSON.stringify(saved)))
   } catch (err) {

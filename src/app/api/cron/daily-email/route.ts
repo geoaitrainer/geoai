@@ -48,14 +48,15 @@ export async function GET(req: Request) {
       // Resolve today's workout
       let workoutDay: WorkoutDayResult = null
       if (workout?.content) {
-        const daysPerWeek = workout.content.days_per_week ?? 3
         const workoutDays = workout.content.days ?? []
         const wDaysSince = Math.floor(
           (today.getTime() - new Date(workout.createdAt).getTime()) / (24 * 60 * 60 * 1000)
         )
-        const cycleDay = wDaysSince % 7
-        workoutDay = cycleDay < daysPerWeek && workoutDays[cycleDay]
-          ? { isRest: false, day: workoutDays[cycleDay] }
+        const totalDays = workoutDays.length || 7
+        const cycleDay = wDaysSince % totalDays
+        const todayDay = workoutDays[cycleDay]
+        workoutDay = todayDay
+          ? { isRest: todayDay.is_rest ?? false, day: todayDay.is_rest ? null : todayDay }
           : { isRest: true, day: null }
       }
 
@@ -101,6 +102,7 @@ interface Meal {
 interface WorkoutDay {
   day_number: number
   day_name: string
+  is_rest?: boolean
   exercises: Exercise[]
   warmup?: string
   cooldown?: string

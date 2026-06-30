@@ -6,6 +6,7 @@ import { ProgressEntry } from '@/lib/mongodb/models/ProgressEntry'
 import { FoodDiary } from '@/lib/mongodb/models/FoodDiary'
 import { WaterEntry } from '@/lib/mongodb/models/WaterEntry'
 import { User } from '@/lib/mongodb/models/User'
+import { Task } from '@/lib/mongodb/models/Task'
 import { getResend, buildWeeklyReportHtml } from '@/lib/email/resend'
 import { GOAL_LABELS } from '@/lib/utils'
 
@@ -24,12 +25,13 @@ export async function POST() {
   since.setDate(since.getDate() - 7)
   const sinceStr = since.toISOString().split('T')[0]
 
-  const [profile, user, recentProgress, recentDiary, recentWater] = await Promise.all([
+  const [profile, user, recentProgress, recentDiary, recentWater, workoutsCompleted] = await Promise.all([
     Profile.findOne({ userId }).lean(),
     User.findById(userId).lean(),
     ProgressEntry.find({ userId, date: { $gte: sinceStr } }).sort({ date: 1 }).lean(),
     FoodDiary.find({ userId, date: { $gte: sinceStr } }).select('calories date').lean(),
     WaterEntry.find({ userId, date: { $gte: sinceStr } }).select('amount_ml date').lean(),
+    Task.countDocuments({ userId, type: 'workout', completed: true, date: { $gte: sinceStr } }),
   ])
 
   if (!profile || !user) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
@@ -69,7 +71,7 @@ export async function POST() {
       currentWeight,
       calorieAvg,
       calorieGoal: p.calorie_goal || 2000,
-      workoutsCompleted: 0,
+      workoutsCompleted,
       waterAvgMl,
     })
 
