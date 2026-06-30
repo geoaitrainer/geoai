@@ -92,8 +92,10 @@ export default function WorkoutPage() {
                 <div className="flex flex-wrap gap-2 mb-2">
                   <Badge variant="success">{program.type === 'gym' ? '🏋️ დარბაზი' : '🏠 სახლი'}</Badge>
                   <Badge variant="default">{EXPERIENCE_LABELS[program.level]}</Badge>
+                  {program.content.split_type && <Badge variant="protein">⚡ {program.content.split_type}</Badge>}
                   <Badge variant="default">📅 {program.content.duration_weeks} კვირა</Badge>
                   <Badge variant="default">🗓 {program.content.days_per_week} ვარჯიში/კვირა</Badge>
+                  {program.content.deload_week && <Badge variant="default">💤 Deload კვ.{program.content.deload_week}</Badge>}
                 </div>
                 <h3 className="font-semibold text-lg">{program.content.name}</h3>
                 <p className="text-sm text-[var(--muted-foreground)] mt-1">{program.content.description}</p>
@@ -189,17 +191,28 @@ export default function WorkoutPage() {
                     {day.exercises.map((ex, i) => (
                       <Card key={i}>
                         <CardContent className="pt-4">
-                          <div className="flex items-start justify-between mb-3">
-                            <h4 className="font-semibold">{i + 1}. {ex.name}</h4>
-                            <div className="flex gap-1">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-1.5">
+                              {ex.is_compound && (
+                                <span className="text-[10px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded">
+                                  COMPOUND
+                                </span>
+                              )}
+                              <h4 className="font-semibold">{i + 1}. {ex.name}</h4>
+                            </div>
+                            <div className="flex gap-1 flex-wrap justify-end">
                               <Badge variant="success">{ex.sets} სეტი</Badge>
                               <Badge variant="protein">{ex.reps} გამ</Badge>
+                              {ex.rpe && <Badge variant="default">RPE {ex.rpe}</Badge>}
                             </div>
                           </div>
-                          <div className="flex gap-4 text-sm text-[var(--muted-foreground)] mb-3">
-                            <span>⏸ დასვენება: {ex.rest_seconds || 60}წმ</span>
+
+                          <div className="flex flex-wrap gap-3 text-xs text-[var(--muted-foreground)] mb-3">
+                            <span>⏸ {ex.rest_seconds || 60}წმ</span>
+                            {ex.tempo && <span>🎯 Tempo: {ex.tempo}</span>}
                             {ex.weight_suggestion && <span>🏋️ {ex.weight_suggestion}</span>}
                           </div>
+
                           {ex.notes && (
                             <p className="text-xs text-[var(--muted-foreground)] mb-3 bg-[var(--muted)] rounded p-2">
                               💡 {ex.notes}

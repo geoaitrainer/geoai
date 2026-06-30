@@ -9,6 +9,9 @@ export interface Exercise {
   notes?: string
   weight_suggestion?: string
   video_url?: string
+  is_compound?: boolean
+  rpe?: number
+  tempo?: string
 }
 
 export interface RestActivity {
@@ -40,7 +43,9 @@ export interface WorkoutProgram {
     description: string
     duration_weeks: number
     days_per_week: number
+    split_type: string
     days: WorkoutDay[]
+    deload_week: number
     progression_notes: string
   }
   is_active: boolean

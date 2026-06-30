@@ -8,6 +8,9 @@ interface Exercise {
   reps: number | string
   rest_seconds?: number
   weight_suggestion?: string
+  is_compound?: boolean
+  rpe?: number
+  tempo?: string
 }
 
 interface WorkoutTask {
@@ -18,6 +21,7 @@ interface WorkoutTask {
     day_index: number
     sets?: number | string
     reps?: number | string
+    weight_used?: string
   }
 }
 
@@ -31,6 +35,8 @@ export function WorkoutChecklist({ dayIndex, exercises, dayName }: Props) {
   const [tasks, setTasks] = useState<WorkoutTask[]>([])
   const [loading, setLoading] = useState(true)
   const [seeding, setSeeding] = useState(false)
+  const [editingWeight, setEditingWeight] = useState<string | null>(null)
+  const [weightInput, setWeightInput] = useState('')
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -49,9 +55,7 @@ export function WorkoutChecklist({ dayIndex, exercises, dayName }: Props) {
 
   async function seedTasks() {
     setSeeding(true)
-    // remove old tasks for this day
     await Promise.all(tasks.map(t => fetch(`/api/tasks?id=${t._id}`, { method: 'DELETE' })))
-
     const created: WorkoutTask[] = []
     for (let i = 0; i < exercises.length; i++) {
       const ex = exercises[i]
@@ -82,6 +86,19 @@ export function WorkoutChecklist({ dayIndex, exercises, dayName }: Props) {
       const updated = await res.json()
       setTasks(prev => prev.map(t => t._id === task._id ? updated : t))
     }
+  }
+
+  async function saveWeight(task: WorkoutTask, weight: string) {
+    const res = await fetch('/api/tasks', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: task._id, meta: { ...task.meta, weight_used: weight } }),
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      setTasks(prev => prev.map(t => t._id === task._id ? updated : t))
+    }
+    setEditingWeight(null)
   }
 
   const doneCount = tasks.filter(t => t.completed).length
@@ -142,31 +159,75 @@ export function WorkoutChecklist({ dayIndex, exercises, dayName }: Props) {
             : 'დააჭირე "+ ტასკების დამატება" სავარჯიშოების სიის შესაქმნელად'}
         </p>
       ) : (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {tasks.map(task => (
-            <button
-              key={task._id}
-              onClick={() => toggle(task)}
-              className={`w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all text-left ${
-                task.completed
-                  ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800'
-                  : 'bg-[var(--muted)] border-[var(--border)] hover:border-primary-400'
-              }`}
-            >
-              <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
-                task.completed ? 'bg-primary-600 border-primary-600' : 'border-[var(--border)]'
-              }`}>
-                {task.completed && <span className="text-white text-[10px] leading-none font-bold">✓</span>}
-              </div>
-              <span className={`text-sm flex-1 ${task.completed ? 'line-through text-[var(--muted-foreground)]' : ''}`}>
-                {task.title}
-              </span>
-              {task.meta?.sets && (
-                <span className="text-xs text-[var(--muted-foreground)] flex-shrink-0">
-                  {task.meta.sets} × {task.meta.reps}
+            <div key={task._id} className={`rounded-xl border transition-all ${
+              task.completed
+                ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800'
+                : 'bg-[var(--muted)] border-[var(--border)]'
+            }`}>
+              {/* Main row */}
+              <button
+                onClick={() => toggle(task)}
+                className="w-full flex items-center gap-3 p-2.5 text-left"
+              >
+                <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
+                  task.completed ? 'bg-primary-600 border-primary-600' : 'border-[var(--border)]'
+                }`}>
+                  {task.completed && <span className="text-white text-[10px] leading-none font-bold">✓</span>}
+                </div>
+                <span className={`text-sm flex-1 ${task.completed ? 'line-through text-[var(--muted-foreground)]' : ''}`}>
+                  {task.title}
                 </span>
-              )}
-            </button>
+                {task.meta?.sets && (
+                  <span className="text-xs text-[var(--muted-foreground)] flex-shrink-0">
+                    {task.meta.sets} × {task.meta.reps}
+                  </span>
+                )}
+              </button>
+
+              {/* Weight logging row */}
+              <div className="px-2.5 pb-2 flex items-center gap-2">
+                <span className="text-xs text-[var(--muted-foreground)]">🏋️</span>
+                {editingWeight === task._id ? (
+                  <div className="flex items-center gap-1 flex-1">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={weightInput}
+                      onChange={e => setWeightInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') saveWeight(task, weightInput)
+                        if (e.key === 'Escape') setEditingWeight(null)
+                      }}
+                      placeholder="მაგ: 80კგ / სხეული"
+                      className="flex-1 text-xs bg-[var(--background)] border border-[var(--border)] rounded px-2 py-1 outline-none focus:border-primary-500"
+                    />
+                    <button
+                      onClick={() => saveWeight(task, weightInput)}
+                      className="text-xs text-primary-600 font-semibold px-2 py-1 rounded hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                    >
+                      შენახვა
+                    </button>
+                    <button
+                      onClick={() => setEditingWeight(null)}
+                      className="text-xs text-[var(--muted-foreground)] px-1"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setEditingWeight(task._id); setWeightInput(task.meta?.weight_used ?? '') }}
+                    className="text-xs text-[var(--muted-foreground)] hover:text-primary-600 transition-colors"
+                  >
+                    {task.meta?.weight_used
+                      ? <span className="font-medium text-primary-600">{task.meta.weight_used}</span>
+                      : '+ წონის ჩაწერა'}
+                  </button>
+                )}
+              </div>
+            </div>
           ))}
         </div>
       )}

@@ -23,11 +23,14 @@ export async function POST(request: NextRequest) {
     const completion = await openaiClient.chat.completions.create({
       model: 'google/gemini-2.5-flash-lite',
       messages: [
-        { role: 'system', content: 'შენ ხარ პერსონალური ტრენერი. პასუხობ JSON ფორმატით.' },
+        {
+          role: 'system',
+          content: 'შენ ხარ NSCA-სერტიფიცირებული სტრენგთ & კონდიშნინგ სპეციალისტი 10+ წლის გამოცდილებით. იყენებ მეცნიერულ პრინციპებს: progressive overload, periodization, compound-first, muscle frequency 2x/კვირა. ყოველთვის პასუხობ მხოლოდ JSON ფორმატით ქართულ ენაზე.',
+        },
         { role: 'user', content: prompt },
       ],
       response_format: { type: 'json_object' },
-      max_tokens: 4000,
+      max_tokens: 8000,
     })
 
     const content = completion.choices[0]?.message?.content

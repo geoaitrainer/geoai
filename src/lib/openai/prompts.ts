@@ -110,46 +110,78 @@ ${profile.disliked_foods?.length ? `არასასურველი: ${prof
 }
 
 export function buildWorkoutPlanPrompt(profile: Profile, type: 'gym' | 'home'): string {
+  const exp = profile.experience
+  const splitMap = {
+    beginner:     { split: 'Full Body', days: 3, desc: 'სრული სხეული — კვირაში 3-ჯერ' },
+    intermediate: { split: 'Upper/Lower', days: 4, desc: 'ზედა/ქვედა გაყოფა — კვირაში 4-ჯერ' },
+    advanced:     { split: 'Push/Pull/Legs', days: 6, desc: 'Push/Pull/Legs — კვირაში 6-ჯერ' },
+  }
+  const split = splitMap[exp as keyof typeof splitMap] ?? splitMap.intermediate
+
   return `შექმენი ${type === 'gym' ? 'სავარჯიშო დარბაზის' : 'სახლის'} ვარჯიშის პროგრამა:
 
-მომხმარებელი: ${profile.name}
-სქესი: ${profile.gender === 'male' ? 'კაცი' : 'ქალი'}, ასაკი: ${profile.age}
-წონა: ${profile.weight_kg}კგ
+## მომხმარებელი
+სახელი: ${profile.name}
+სქესი: ${profile.gender === 'male' ? 'კაცი' : 'ქალი'} | ასაკი: ${profile.age} | წონა: ${profile.weight_kg}კგ | სიმაღლე: ${profile.height_cm ?? '?'}სმ
 მიზანი: ${GOAL_LABELS[profile.goal]}
-გამოცდილება: ${profile.experience === 'beginner' ? 'დამწყები' : profile.experience === 'intermediate' ? 'საშუალო' : 'პროფესიონალი'}
+გამოცდილება: ${exp === 'beginner' ? 'დამწყები' : exp === 'intermediate' ? 'საშუალო' : 'პროფესიონალი'}
 ${profile.conditions?.length ? `შეზღუდვები: ${profile.conditions.join(', ')}` : ''}
 
-მოთხოვნები:
-- ყველა ტექსტი ქართულად (name, description, day_name, warmup, cooldown, notes, progression_notes, rest_activities)
-- days მასივი შეიცავს ყველა 7 დღეს (კვირის სრული ციკლი)
-- ვარჯიშის დღეები: is_rest = false, ავსებ exercises-ს
-- დასვენების დღეები: is_rest = true, exercises = [], ავსებ rest_activities-ს შემდეგი ვარიანტებიდან: ცურვა, სეირნობა, განტვირთვა, წიგნის კითხვა, მედიტაცია, გაჭიმვა
+## სავალდებულო პრინციპები
+1. **სპლიტი:** ${split.split} (${split.desc})
+2. **კომპაუნდი პირველი:** ყოველ ვარჯიშის დღეს compound (მრავალსახსრიანი) სავარჯიშოები ბოლოს isolation-ამდე
+3. **მუსკულ ჯგუფის სიხშირე:** თითო მუსკულ ჯგუფი კვირაში 2-ჯერ (${split.split}-სპლიტი ამას ავტომატურად უზრუნველყოფს)
+4. **RPE (Rate of Perceived Exertion):** 1-10 სკალა — დამწყები 6-7, საშუალო 7-8, პროფი 8-9
+5. **Tempo (ეკცენტრიკი-პაუზა-კონცენტრიკი-ზედა):** მაგ. "3-1-2-0" — compound-ებზე, isolation-ზე "2-0-2-0"
+6. **Deload:** duration_weeks-ში ბოლო კვირა = deload (50% მოცულობა, 60% ინტენსივობა)
+7. **Progressive Overload:** კონკრეტული კვირეული პროგრესია (წონა/სეტი/გამეო)
+
+## სტრუქტურა
+- days: **ყველა 7 დღე** (ვარჯიში + დასვენება)
+- ვარჯიშის დღე: is_rest=false, compound_first=true, exercises 4-7 ცალი
+- დასვენება: is_rest=true, rest_activities-ში: ცურვა / სეირნობა / განტვირთვა / წიგნის კითხვა / მედიტაცია / გაჭიმვა
 
 დააბრუნე JSON:
 {
   "name": "პროგრამის სახელი",
-  "description": "მოკლე აღწერა",
+  "description": "მოკლე, მოტივაციური აღწერა",
+  "split_type": "${split.split}",
   "duration_weeks": 8,
-  "days_per_week": 4,
+  "days_per_week": ${split.days},
+  "deload_week": 4,
   "days": [
     {
       "day_number": 1,
-      "day_name": "მკერდი და ტრიცეფსი",
+      "day_name": "ორშაბათი — Push (მკერდი, მხარი, ტრიცეფსი)",
       "is_rest": false,
-      "muscle_groups": ["მკერდი", "ტრიცეფსი"],
-      "warmup": "5 წუთი ელფსური",
+      "muscle_groups": ["მკერდი", "წინა მხარი", "ტრიცეფსი"],
+      "warmup": "5 წუთი: ელფსური + მხრის წრიული მოძრაობები",
       "exercises": [
         {
-          "name": "საწოლი პრესი",
+          "name": "ბარბელის ჩასმული პრესი",
+          "is_compound": true,
           "sets": 4,
-          "reps": "8-12",
-          "rest_seconds": 90,
-          "notes": "ნელი ნეგატიური ფაზა",
-          "weight_suggestion": "საკუთარი წონის 60%"
+          "reps": "6-8",
+          "rest_seconds": 120,
+          "rpe": 8,
+          "tempo": "3-1-2-0",
+          "weight_suggestion": "1RM-ის 75% (RPE 8)",
+          "notes": "გულმკერდი სრულ გაჭიმვამდე, ნელი ჩამოშვება"
+        },
+        {
+          "name": "დუმბელის ბოჭლა",
+          "is_compound": false,
+          "sets": 3,
+          "reps": "12-15",
+          "rest_seconds": 60,
+          "rpe": 7,
+          "tempo": "2-0-2-0",
+          "weight_suggestion": "RPE 7 — ბოლო 2 გამეო. ძნელი",
+          "notes": "isolation — ტრიცეფსზე ფოკუსი"
         }
       ],
-      "cooldown": "გაჭიმვა 5 წუთი",
-      "duration_minutes": 60
+      "cooldown": "გაჭიმვა 5 წუთი: მკერდი + ტრიცეფსი",
+      "duration_minutes": 65
     },
     {
       "day_number": 2,
@@ -159,13 +191,13 @@ ${profile.conditions?.length ? `შეზღუდვები: ${profile.condit
       "exercises": [],
       "duration_minutes": 30,
       "rest_activities": [
-        { "name": "სეირნობა", "duration": "30 წუთი", "notes": "მსუბუქი ტემპი, სუფთა ჰაერზე" },
-        { "name": "წიგნის კითხვა", "duration": "1 საათი", "notes": "მოდუნება და ტვინის განტვირთვა" }
+        { "name": "სეირნობა", "duration": "30-40 წუთი", "notes": "მსუბუქი ტემპი, სუფთა ჰაერზე — აქტიური გამოჯანმრთელება" },
+        { "name": "გაჭიმვა", "duration": "15 წუთი", "notes": "გუშინდელი კუნთების გაჭიმვა" }
       ],
-      "rest_notes": "დღეს სხეული განახლდება — ენერგია ნახვამდე!"
+      "rest_notes": "სხეული ამ დღეს კუნთებს ააშენებს. სვი 2.5+ ლ წყალი."
     }
   ],
-  "progression_notes": "ყოველ 2 კვირაში გაზარდე დატვირთვა 5-10%"
+  "progression_notes": "კვირა 1-3: ბაზა. კვირა 4: Deload (50% სეტი, 60% წონა). კვირა 5-7: +2.5კგ compound-ებზე, +1 სეტი isolation-ზე. კვირა 8: Peak."
 }`
 }
 
