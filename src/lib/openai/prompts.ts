@@ -119,6 +119,8 @@ export function buildWorkoutPlanPrompt(profile: Profile, type: 'gym' | 'home'): 
 გამოცდილება: ${profile.experience === 'beginner' ? 'დამწყები' : profile.experience === 'intermediate' ? 'საშუალო' : 'პროფესიონალი'}
 ${profile.conditions?.length ? `შეზღუდვები: ${profile.conditions.join(', ')}` : ''}
 
+მოთხოვნა: ყველა ტექსტი (name, description, day_name, warmup, cooldown, notes, progression_notes) დაწერე ქართულ ენაზე.
+
 დააბრუნე JSON:
 {
   "name": "პროგრამის სახელი",
