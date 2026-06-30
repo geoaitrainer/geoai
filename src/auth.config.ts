@@ -11,7 +11,7 @@ export const authConfig: NextAuthConfig = {
         "/dashboard", "/nutrition", "/workout", "/progress", "/chat", "/profile", "/admin", "/recipes", "/calendar",
       ]
       const isProtected = protectedPaths.some(p => path.startsWith(p))
-      const isAuthPage = path === "/login" || path === "/register"
+      const isAuthPage = path === "/login" || path === "/register" || path === "/admin-login" || path === "/forgot-password"
 
       if (isProtected && !isLoggedIn) return false
       if (isAuthPage && isLoggedIn)

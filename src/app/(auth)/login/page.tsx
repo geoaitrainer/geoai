@@ -63,12 +63,24 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <p className="text-center text-sm text-[var(--muted-foreground)] mt-6">
+      <div className="mt-4 text-center">
+        <Link href="/forgot-password" className="text-sm text-[var(--muted-foreground)] hover:text-primary-600 transition-colors">
+          პაროლი დაგავიწყდა?
+        </Link>
+      </div>
+
+      <p className="text-center text-sm text-[var(--muted-foreground)] mt-4">
         ანგარიში არ გაქვს?{' '}
         <Link href="/register" className="text-primary-600 hover:underline font-medium">
           რეგისტრაცია
         </Link>
       </p>
+
+      <div className="mt-4 pt-4 border-t border-[var(--border)] text-center">
+        <Link href="/admin-login" className="text-xs text-[var(--muted-foreground)] hover:text-primary-600 transition-colors">
+          🔑 ადმინ შესვლა OTP-ით
+        </Link>
+      </div>
     </div>
   )
 }
