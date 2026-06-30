@@ -159,7 +159,7 @@ ADMIN_SETUP_SECRET     # optional — overrides default "geoai-admin-2026" for /
 
 | Account | Team | Project | Production URL |
 |---|---|---|---|
-| `geoaitrainer` | `aigeotrainer` (`team_FAb234VDVF8qflYGXQ4rzVsL`) | `trainer-app` (`prj_MMSdFbnzvP2Z5n4EUERNn6SmK08h`) | `https://trainer-app-theta-six.vercel.app` |
+| `geoaitrainer` | `aigeotrainer` (`team_FAb234VDVF8qflYGXQ4rzVsL`) | `trainer-app` (`prj_MMSdFbnzvP2Z5n4EUERNn6SmK08h`) | `https://geotraener.vercel.app` |
 
 Deploy command (non-interactive, requires token):
 ```bash
