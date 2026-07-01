@@ -1,6 +1,14 @@
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack'
 export type MealPlanType = '7day' | '30day'
 
+export interface MealAlternative {
+  name: string
+  calories: number
+  protein_g: number
+  fat_g: number
+  carbs_g: number
+}
+
 export interface Meal {
   name: string
   ingredients: string[]
@@ -9,7 +17,7 @@ export interface Meal {
   fat_g: number
   carbs_g: number
   recipe?: string
-  alternatives?: string[]
+  alternatives?: MealAlternative[]
 }
 
 export interface DayPlan {
@@ -27,6 +35,14 @@ export interface DayPlan {
   total_carbs_g: number
 }
 
+export interface ShoppingItem {
+  category: string
+  item: string
+  amount: string
+  estimated_price?: number       // legacy field
+  estimated_price_gel?: number   // new field
+}
+
 export interface MealPlan {
   id: string
   user_id: string
@@ -34,18 +50,12 @@ export interface MealPlan {
   content: {
     days: DayPlan[]
     shopping_list: ShoppingItem[]
-    notes: string
+    notes?: string
+    clinical_and_lifestyle_notes?: string
   }
   week_number?: number
   is_active: boolean
   created_at: string
-}
-
-export interface ShoppingItem {
-  category: string
-  item: string
-  amount: string
-  estimated_price?: number
 }
 
 export interface FoodDiaryEntry {

@@ -7,7 +7,7 @@ import { TopBar } from '@/components/layout/TopBar'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import type { MealPlan, DayPlan } from '@/types/nutrition'
+import type { MealPlan, DayPlan, ShoppingItem, MealAlternative } from '@/types/nutrition'
 
 export default function NutritionPage() {
   const [activePlan, setActivePlan] = useState<MealPlan | null>(null)
@@ -167,6 +167,9 @@ export default function NutritionPage() {
                       const meal = day.meals[mealKey]
                       if (!meal) return null
                       const mealNames = { breakfast: '☀️ საუზმე', lunch: '🌞 სადილი', dinner: '🌙 ვახშამი', snack: '🍎 სნეკი' }
+                      const recipeSteps = meal.recipe
+                        ? meal.recipe.split(/ნაბიჯი\s*\d+:/i).map(s => s.trim()).filter(Boolean)
+                        : null
                       return (
                         <Card key={mealKey}>
                           <CardHeader>
@@ -186,20 +189,39 @@ export default function NutritionPage() {
                               {meal.ingredients?.join(', ')}
                             </div>
                             {meal.recipe && (
-                              <div className="text-sm bg-[var(--muted)] rounded-lg p-3 mt-2">
-                                <p className="font-medium mb-1">📝 მომზადება:</p>
-                                <p className="text-[var(--muted-foreground)]">{meal.recipe}</p>
-                              </div>
+                              <details className="mt-2 group">
+                                <summary className="cursor-pointer text-xs font-semibold text-primary-600 dark:text-primary-400 select-none list-none flex items-center gap-1 py-1">
+                                  <span className="transition-transform duration-200 group-open:rotate-90 inline-block">▶</span>
+                                  📝 მომზადების ინსტრუქცია
+                                </summary>
+                                <div className="mt-2 bg-[var(--muted)] rounded-lg p-3 text-sm text-[var(--muted-foreground)]">
+                                  {recipeSteps && recipeSteps.length > 1 ? (
+                                    <ol className="space-y-1.5 list-decimal list-inside">
+                                      {recipeSteps.map((step, si) => (
+                                        <li key={si}>{step}</li>
+                                      ))}
+                                    </ol>
+                                  ) : (
+                                    <p>{meal.recipe}</p>
+                                  )}
+                                </div>
+                              </details>
                             )}
                             {meal.alternatives && meal.alternatives.length > 0 && (
-                              <div className="mt-2 text-xs text-[var(--muted-foreground)]">
-                                💡 ალტერნატივა: {meal.alternatives.join(', ')}
-                              </div>
+                              <AlternativesView alternatives={meal.alternatives} />
                             )}
                           </CardContent>
                         </Card>
                       )
                     })}
+
+                    {/* Clinical notes for this day's plan */}
+                    {activePlan.content.clinical_and_lifestyle_notes && activeDay === 0 && (
+                      <div className="bg-blue-50 dark:bg-blue-900/10 rounded-xl p-4 text-sm">
+                        <p className="font-semibold mb-2">🩺 კლინიკური რეკომენდაციები</p>
+                        <p className="text-[var(--muted-foreground)]">{activePlan.content.clinical_and_lifestyle_notes}</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </>
@@ -215,14 +237,47 @@ export default function NutritionPage() {
   )
 }
 
-function ShoppingListView({ items }: { items: { category: string; item: string; amount: string; estimated_price?: number }[] }) {
-  const grouped = items.reduce<Record<string, typeof items>>((acc, item) => {
+function AlternativesView({ alternatives }: { alternatives: MealAlternative[] | string[] }) {
+  const isObjects = alternatives.length > 0 && typeof alternatives[0] === 'object'
+  if (!isObjects) {
+    return (
+      <div className="mt-2 text-xs text-[var(--muted-foreground)]">
+        💡 ალტერნატივა: {(alternatives as string[]).join(', ')}
+      </div>
+    )
+  }
+  const alts = alternatives as MealAlternative[]
+  return (
+    <details className="mt-2 group">
+      <summary className="cursor-pointer text-xs font-semibold text-[var(--muted-foreground)] select-none list-none flex items-center gap-1 py-1">
+        <span className="transition-transform duration-200 group-open:rotate-90 inline-block">▶</span>
+        💡 ალტერნატივები ({alts.length})
+      </summary>
+      <div className="mt-1.5 space-y-1.5">
+        {alts.map((alt, i) => (
+          <div key={i} className="bg-[var(--muted)] rounded-lg p-2.5 text-xs">
+            <p className="font-medium text-[var(--foreground)] mb-1">{alt.name}</p>
+            <div className="flex gap-2 text-[var(--muted-foreground)] flex-wrap">
+              <span>🔥 {alt.calories}კკ</span>
+              <span>ც: {alt.protein_g}გ</span>
+              <span>ც: {alt.fat_g}გ</span>
+              <span>ნ: {alt.carbs_g}გ</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </details>
+  )
+}
+
+function ShoppingListView({ items }: { items: ShoppingItem[] }) {
+  const grouped = items.reduce<Record<string, ShoppingItem[]>>((acc, item) => {
     if (!acc[item.category]) acc[item.category] = []
     acc[item.category].push(item)
     return acc
   }, {})
 
-  const totalPrice = items.reduce((sum, item) => sum + (item.estimated_price || 0), 0)
+  const totalPrice = items.reduce((sum, item) => sum + (item.estimated_price_gel ?? item.estimated_price ?? 0), 0)
 
   return (
     <div className="space-y-4">
@@ -239,20 +294,21 @@ function ShoppingListView({ items }: { items: { category: string; item: string; 
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
-              {catItems.map((item, i) => (
-                <li key={i} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <input type="checkbox" className="rounded" />
-                    <span>{item.item}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[var(--muted-foreground)]">{item.amount}</span>
-                    {item.estimated_price && (
-                      <Badge variant="default">≈ {item.estimated_price} ₾</Badge>
-                    )}
-                  </div>
-                </li>
-              ))}
+              {catItems.map((item, i) => {
+                const price = item.estimated_price_gel ?? item.estimated_price
+                return (
+                  <li key={i} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" className="rounded" />
+                      <span>{item.item}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[var(--muted-foreground)]">{item.amount}</span>
+                      {price ? <Badge variant="default">≈ {price} ₾</Badge> : null}
+                    </div>
+                  </li>
+                )
+              })}
             </ul>
           </CardContent>
         </Card>
