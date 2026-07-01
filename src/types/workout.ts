@@ -1,6 +1,13 @@
 export type WorkoutType = 'gym' | 'home'
 export type WorkoutLevel = 'beginner' | 'intermediate' | 'advanced'
 
+export interface ExecutionDetails {
+  setup: string
+  technique_steps: string[]
+  target_sensation: string
+  safety_errors: string
+}
+
 export interface Exercise {
   name: string
   sets: number
@@ -13,6 +20,7 @@ export interface Exercise {
   rpe?: number
   rir?: number
   tempo?: string
+  execution_details?: ExecutionDetails
 }
 
 export interface RestActivity {

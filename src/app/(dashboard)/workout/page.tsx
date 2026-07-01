@@ -219,6 +219,38 @@ export default function WorkoutPage() {
                               💡 {ex.notes}
                             </p>
                           )}
+
+                          {ex.execution_details && (
+                            <details className="mb-3 group">
+                              <summary className="cursor-pointer text-xs font-semibold text-primary-600 dark:text-primary-400 select-none list-none flex items-center gap-1 py-1">
+                                <span className="transition-transform duration-200 group-open:rotate-90 inline-block">▶</span>
+                                ტექნიკის სახელმძღვანელო
+                              </summary>
+                              <div className="mt-2 space-y-2 text-xs text-[var(--muted-foreground)]">
+                                <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-3">
+                                  <p className="font-semibold text-[var(--foreground)] mb-1">📐 საწყისი პოზიცია</p>
+                                  <p>{ex.execution_details.setup}</p>
+                                </div>
+                                <div className="bg-[var(--muted)] rounded-lg p-3">
+                                  <p className="font-semibold text-[var(--foreground)] mb-1">🔄 შესრულება</p>
+                                  <ol className="space-y-1 list-decimal list-inside">
+                                    {ex.execution_details.technique_steps.map((step, si) => (
+                                      <li key={si}>{step}</li>
+                                    ))}
+                                  </ol>
+                                </div>
+                                <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-3">
+                                  <p className="font-semibold text-[var(--foreground)] mb-1">✅ სად უნდა იგრძნობოდეს</p>
+                                  <p>{ex.execution_details.target_sensation}</p>
+                                </div>
+                                <div className="bg-red-50 dark:bg-red-900/10 rounded-lg p-3">
+                                  <p className="font-semibold text-[var(--foreground)] mb-1">⚠️ გავრცელებული შეცდომები</p>
+                                  <p>{ex.execution_details.safety_errors}</p>
+                                </div>
+                              </div>
+                            </details>
+                          )}
+
                           <button
                             onClick={() => startRest(ex.name, ex.rest_seconds)}
                             className="w-full py-2.5 text-sm font-semibold rounded-xl bg-workout/10 hover:bg-workout/20 active:bg-workout/30 text-workout border border-workout/30 transition-colors flex items-center justify-center gap-2"
