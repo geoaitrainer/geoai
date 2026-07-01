@@ -188,7 +188,7 @@ export default function WorkoutPage() {
                       </div>
                     )}
 
-                    {day.exercises.map((ex, i) => (
+                    {(day.exercises ?? []).map((ex, i) => (
                       <Card key={i}>
                         <CardContent className="pt-4">
                           <div className="flex items-start justify-between mb-2">

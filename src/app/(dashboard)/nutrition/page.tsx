@@ -157,8 +157,8 @@ export default function NutritionPage() {
                     {/* Day summary */}
                     <div className="flex gap-3 flex-wrap">
                       <Badge variant="calories">🔥 {day.total_calories} კკალ</Badge>
-                      <Badge variant="protein">🥩 ც: {day.total_protein_g}გ</Badge>
-                      <Badge variant="fat">🧈 ც: {day.total_fat_g}გ</Badge>
+                      <Badge variant="protein">🥩 ცილა: {day.total_protein_g}გ</Badge>
+                      <Badge variant="fat">🧈 ცხიმი: {day.total_fat_g}გ</Badge>
                       <Badge variant="carbs">🍞 ნ: {day.total_carbs_g}გ</Badge>
                     </div>
 
@@ -180,8 +180,8 @@ export default function NutritionPage() {
                           </CardHeader>
                           <CardContent>
                             <div className="flex gap-2 mb-3 flex-wrap">
-                              <Badge variant="protein">ც: {meal.protein_g}გ</Badge>
-                              <Badge variant="fat">ც: {meal.fat_g}გ</Badge>
+                              <Badge variant="protein">ცილა: {meal.protein_g}გ</Badge>
+                              <Badge variant="fat">ცხიმი: {meal.fat_g}გ</Badge>
                               <Badge variant="carbs">ნ: {meal.carbs_g}გ</Badge>
                             </div>
                             <div className="text-sm text-[var(--muted-foreground)] mb-2">

@@ -192,8 +192,8 @@ function FoodDiaryContent() {
           />
           <div className="flex gap-2 flex-wrap">
             <Badge variant="calories">🔥 {Math.round(totals.calories)} კკალ</Badge>
-            <Badge variant="protein">ც: {Math.round(totals.protein_g)}გ</Badge>
-            <Badge variant="fat">ც: {Math.round(totals.fat_g)}გ</Badge>
+            <Badge variant="protein">ცილა: {Math.round(totals.protein_g)}გ</Badge>
+            <Badge variant="fat">ცხიმი: {Math.round(totals.fat_g)}გ</Badge>
             <Badge variant="carbs">ნ: {Math.round(totals.carbs_g)}გ</Badge>
           </div>
         </div>
