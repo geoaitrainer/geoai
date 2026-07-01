@@ -75,6 +75,10 @@ export async function DELETE(request: NextRequest) {
   const id = request.nextUrl.searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
-  await Task.deleteOne({ _id: id, userId: session.user.id })
+  const { isValidObjectId } = await import('mongoose')
+  if (!isValidObjectId(id)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 })
+
+  const result = await Task.deleteOne({ _id: id, userId: session.user.id })
+  if (result.deletedCount === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   return NextResponse.json({ success: true })
 }

@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const month = request.nextUrl.searchParams.get('month') || new Date().toISOString().slice(0, 7)
+  const rawMonth = request.nextUrl.searchParams.get('month') || new Date().toISOString().slice(0, 7)
+  const month = rawMonth.replace(/[^0-9-]/g, '').slice(0, 7)
   await connectDB()
   const userId = session.user.id
 

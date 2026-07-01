@@ -27,7 +27,19 @@ export async function POST(request: NextRequest) {
   const body = await request.json()
   await connectDB()
   const userId = session.user.id
-  const saved = await ProgressEntry.create({ ...body, userId })
+  const { date, weight_kg, body_fat_percent, muscle_mass_kg, notes, chest_cm, waist_cm, hips_cm, bicep_cm } = body
+  const saved = await ProgressEntry.create({
+    userId,
+    date,
+    weight_kg: weight_kg !== undefined ? Number(weight_kg) : undefined,
+    body_fat_percent: body_fat_percent !== undefined ? Number(body_fat_percent) : undefined,
+    muscle_mass_kg: muscle_mass_kg !== undefined ? Number(muscle_mass_kg) : undefined,
+    chest_cm: chest_cm !== undefined ? Number(chest_cm) : undefined,
+    waist_cm: waist_cm !== undefined ? Number(waist_cm) : undefined,
+    hips_cm: hips_cm !== undefined ? Number(hips_cm) : undefined,
+    bicep_cm: bicep_cm !== undefined ? Number(bicep_cm) : undefined,
+    notes,
+  })
 
   const [profile, entries] = await Promise.all([
     Profile.findOne({ userId }).lean(),

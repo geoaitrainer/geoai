@@ -77,14 +77,16 @@ function FoodDiaryContent() {
   }
 
   function fillFromGeo(food: GeorgianFood) {
+    // Normalize to per-100g so submit handler can scale by amount_g
+    const f100 = 100 / food.amount_g
     setForm(prev => ({
       ...prev,
       food_name: food.name,
       amount_g: String(food.amount_g),
-      calories: String(food.calories),
-      protein_g: String(food.protein_g),
-      fat_g: String(food.fat_g),
-      carbs_g: String(food.carbs_g),
+      calories: String(Math.round(food.calories * f100)),
+      protein_g: String(Math.round(food.protein_g * f100 * 10) / 10),
+      fat_g: String(Math.round(food.fat_g * f100 * 10) / 10),
+      carbs_g: String(Math.round(food.carbs_g * f100 * 10) / 10),
     }))
     setGeoSearch('')
     setGeoResults([])
@@ -132,7 +134,7 @@ function FoodDiaryContent() {
       const res = await fetch('/api/ai/food-lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ food_name: aiSearch, amount_g: form.amount_g ? parseFloat(form.amount_g) : undefined }),
+        body: JSON.stringify({ food_name: aiSearch }),
       })
       const data = await res.json()
       if (data.found !== false) {

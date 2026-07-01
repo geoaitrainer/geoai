@@ -14,7 +14,8 @@ export async function GET(request: NextRequest) {
     .sort({ createdAt: 1 })
     .lean()
 
-  return NextResponse.json(JSON.parse(JSON.stringify(entries)))
+  const serialized = JSON.parse(JSON.stringify(entries))
+  return NextResponse.json(serialized.map((e: Record<string, unknown>) => ({ ...e, id: e._id })))
 }
 
 export async function POST(request: NextRequest) {
@@ -23,7 +24,18 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json()
   await connectDB()
-  const entry = await FoodDiary.create({ ...body, userId: session.user.id })
+  const { date, food_name, amount_g, meal_type, calories, protein_g, fat_g, carbs_g } = body
+  const entry = await FoodDiary.create({
+    userId: session.user.id,
+    date,
+    food_name,
+    amount_g: Number(amount_g) || 0,
+    meal_type,
+    calories: Number(calories) || 0,
+    protein_g: Number(protein_g) || 0,
+    fat_g: Number(fat_g) || 0,
+    carbs_g: Number(carbs_g) || 0,
+  })
 
   return NextResponse.json(JSON.parse(JSON.stringify(entry)), { status: 201 })
 }

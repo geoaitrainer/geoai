@@ -17,13 +17,14 @@ export async function POST(request: NextRequest) {
 
   await connectDB()
 
-  const existing = await User.findOne({ email })
+  const normalizedEmail = email.trim().toLowerCase()
+  const existing = await User.findOne({ email: normalizedEmail })
   if (existing) {
     return NextResponse.json({ error: "ამ ელ-ფოსტით მომხმარებელი უკვე არსებობს" }, { status: 400 })
   }
 
   const hashedPassword = await bcrypt.hash(password, 12)
-  const user = await User.create({ email, name, hashedPassword })
+  const user = await User.create({ email: normalizedEmail, name, hashedPassword })
   const userId = user._id.toString()
 
   await Profile.create({

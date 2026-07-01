@@ -125,6 +125,8 @@ export async function DELETE(request: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
 
   await connectDB()
+  const { isValidObjectId } = await import('mongoose')
+  if (!isValidObjectId(userId)) return NextResponse.json({ error: 'Invalid userId' }, { status: 400 })
 
   // Prevent self-deletion
   const session = await auth()
