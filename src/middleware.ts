@@ -5,6 +5,8 @@ export default NextAuth(authConfig).auth
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Exclude static assets, PWA files (manifest, sw) and .well-known (TWA asset
+    // links) so they're served publicly without the auth middleware.
+    "/((?!_next/static|_next/image|favicon.ico|.well-known|manifest.json|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 }

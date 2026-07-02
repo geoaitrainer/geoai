@@ -12,6 +12,14 @@ export function InstallBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [visible, setVisible] = useState(false)
 
+  // Register the service worker globally (offline shell + installability) —
+  // independent of push, which registers separately on the dashboard.
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {})
+    }
+  }, [])
+
   useEffect(() => {
     if (localStorage.getItem('pwa-dismissed')) return
     const handler = (e: Event) => {
