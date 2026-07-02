@@ -24,7 +24,7 @@ npx vercel env add <NAME> production --token <TOKEN>   # add env var non-interac
 
 ## Architecture
 
-**Stack:** Next.js 14 (App Router) · TypeScript · TailwindCSS · MongoDB Atlas (Mongoose) · NextAuth.js v5 · OpenRouter API (`google/gemini-2.5-flash-lite`) · Vercel AI SDK v6 · recharts · jsPDF · Resend · nodemailer (Gmail) · web-push · lucide-react
+**Stack:** Next.js 14 (App Router) · TypeScript · TailwindCSS · MongoDB Atlas (Mongoose) · NextAuth.js v5 · OpenRouter API (`google/gemini-2.5-flash-lite`) · Vercel AI SDK v6 + zod (structured output) · recharts · jsPDF · Resend · nodemailer (Gmail) · web-push · lucide-react
 
 **Language:** All UI, AI prompts, and output are in Georgian (ქართული).
 
@@ -42,7 +42,7 @@ npx vercel env add <NAME> production --token <TOKEN>   # add env var non-interac
 
 **Admin access:** `Profile.is_admin: true`. `src/app/admin/layout.tsx` redirects non-admins. `PUT /api/profile` strips `is_admin`/`plan`/`userId` — users cannot self-elevate.
 
-**First-time admin setup:** `POST /api/setup-admin` with `{ email, secret }`. Secret defaults to `geoai-admin-2026` or `ADMIN_SETUP_SECRET` env var.
+**First-time admin setup:** `POST /api/setup-admin` with `{ email, secret }`. Requires `ADMIN_SETUP_SECRET` env var — **no hardcoded fallback**; endpoint returns 403 "Setup disabled" if the env var is unset.
 
 **Password reset flow:** `POST /api/auth/forgot-password` → checks user exists → saves `AuthToken` (type `password_reset`, 1h TTL) → sends Gmail link. `POST /api/auth/reset-password` → validates token → bcrypt hashes new password → marks token used.
 
@@ -72,17 +72,19 @@ npx vercel env add <NAME> production --token <TOKEN>   # add env var non-interac
 All calls via **OpenRouter** (`https://openrouter.ai/api/v1`, model `google/gemini-2.5-flash-lite`).
 
 - `src/lib/openai/client.ts` — module-level instantiation. Missing `OPENROUTER_API_KEY` at build time fails the build.
-- `src/lib/openai/prompts.ts` — all `build*Prompt` functions. `buildChatSystemPrompt` is profile-adaptive. `buildWorkoutPlanPrompt` selects split strategy by experience level (Full Body / Upper-Lower / PPL).
-- `src/lib/openai/safety.ts` — Georgian medical keyword filter, runs before AI call.
+- `src/lib/openai/prompts.ts` — all `build*Prompt` functions. `buildChatSystemPrompt` is profile-adaptive. `getWorkoutSplit` picks the split by experience (Full Body 3x / Upper-Lower 4x / PPL 6x).
+- `src/lib/openai/safety.ts` — Georgian medical keyword filter, runs before AI call. **Do not add culinary/nutrition words** (e.g. `რეცეპტი`) — they falsely block the recipe/meal features.
+
+**⚠️ Generation is multi-call to beat the model's ~8k output-token cap** (single-shot rich JSON always truncated → `finish_reason: length` → parse failure). See below. Every AI route parses inside try/catch and treats truncation as a clean 502.
 
 | Route | Method | Description |
 |---|---|---|
 | `/api/ai/chat` | POST stream | `streamText`. Loads Profile + active plans → adaptive system prompt. |
-| `/api/ai/meal-plan` | GET/POST | 7 or 30-day meal plan (JSON). |
-| `/api/ai/workout-plan` | GET/POST | Gym or home workout program (JSON). `max_tokens: 8000`. NSCA CSCS system prompt. |
-| `/api/ai/food-lookup` | POST | `{ food_name, amount_g }` → macros. |
+| `/api/ai/meal-plan` | GET/POST | 7 or 30-day plan. **Generates each day separately** (`buildSingleDayMealPrompt`, bounded concurrency 6, one retry) then one `buildMealSummaryPrompt` call aggregates ingredients → shopping list + clinical notes. Fails 502 if <half the days succeed. 20s per-type cooldown (429). `maxDuration = 300`. |
+| `/api/ai/workout-plan` | GET/POST | Gym or home program. **Shell + per-day:** `buildWorkoutShellPrompt` (metadata + 7 day headers, no exercises) → each workout day's exercises filled in parallel via `buildWorkoutDayPrompt` (execution_details per exercise). 20s cooldown. `maxDuration = 300`. |
+| `/api/ai/food-lookup` | POST | `{ food_name }` → macros per 100g (client scales by amount). |
 | `/api/ai/nutrition-analysis` | GET | Diary analysis for `?date=YYYY-MM-DD`. |
-| `/api/ai/recipe` | POST | `{ ingredients }` → full recipe + macros per serving (JSON). |
+| `/api/ai/recipe` | POST | `{ ingredients }` → recipe + macros. Uses **AI SDK `generateObject` + zod schema** (not `openaiClient`); `createOpenAI` with OpenRouter baseURL; `maxOutputTokens: 2000`; personalization from server-side Profile. |
 | `/api/auth/forgot-password` | POST | Check user exists → send Gmail reset link. |
 | `/api/auth/reset-password` | POST | Validate token → update password. |
 | `/api/auth/admin-otp` | POST | Check admin → send 6-digit OTP via Gmail. |
@@ -98,13 +100,15 @@ All calls via **OpenRouter** (`https://openrouter.ai/api/v1`, model `google/gemi
 
 ### Workout Plan — NSCA CSCS System
 
-`buildWorkoutPlanPrompt` enforces:
+Two-stage generation (`getWorkoutSplit` + `buildWorkoutShellPrompt` + `buildWorkoutDayPrompt`) enforces:
 - **Split by experience:** beginner → Full Body 3x, intermediate → Upper/Lower 4x, advanced → PPL 6x
 - **Compound-first:** multi-joint movements before isolation every session
 - **Periodization:** Accumulation (kw.1-2, RPE 7, RIR 3) → Intensification (kw.3, RPE 8-9, RIR 1-2) → Deload (kw.4, 50% volume)
-- **Per-exercise fields:** `is_compound`, `rpe` (1-10), `rir` (Reps in Reserve), `tempo` ("3-1-2-0"), `weight_suggestion`
-- **All 7 days** in `days[]` with `is_rest: true/false`. Rest days have `rest_activities[]` (ცურვა, სეირნობა, განტვირთვა, წიგნის კითხვა).
+- **Per-exercise fields:** `is_compound`, `rpe` (1-10), `rir`, `tempo` ("3-1-2-0"), `weight_suggestion`, and `execution_details` (`setup`, `technique_steps[]`, `target_sensation`, `safety_errors`) — rendered as a collapsible technique guide in `workout/page.tsx`.
+- **All 7 days** in `days[]` with `is_rest: true/false`. Rest days have `rest_activities[]`.
 - **Program fields:** `split_type`, `deload_week`, `days_per_week`, `duration_weeks`
+
+Meal plan mirrors this: `Meal.alternatives` is `MealAlternative[]` (objects with macros, not strings), `ShoppingItem.estimated_price_gel`, and top-level `clinical_and_lifestyle_notes`.
 
 `WorkoutChecklist.tsx` supports per-exercise weight logging stored in `task.meta.weight_used`.
 
@@ -112,7 +116,7 @@ All calls via **OpenRouter** (`https://openrouter.ai/api/v1`, model `google/gemi
 
 Two email providers:
 
-**Nodemailer (Gmail)** — `src/lib/email/nodemailer.ts`. Used for: password reset, admin OTP, daily plan email. `nodemailer` must be in `serverComponentsExternalPackages` in `next.config.mjs` (uses Node.js `net`/`tls` built-ins).
+**Nodemailer (Gmail)** — `src/lib/email/nodemailer.ts`. Used for: password reset, admin OTP, daily plan email. `nodemailer` must be in `serverComponentsExternalPackages` in `next.config.mjs` (uses Node.js `net`/`tls` built-ins). `web-push` is in that list too (pulls `asn1.js`, which webpack cannot bundle — a corrupted/partial `asn1.js` install missing `pem.js` breaks the build; `asn1.js` is pinned directly in `package.json` to guard against this).
 
 **Resend** — `src/lib/email/resend.ts`. Used for: weekly nutrition report only.
 
@@ -123,7 +127,7 @@ Two email providers:
 ### Calendar date mapping
 
 - **Meal plan:** `dayIndex = floor((now - createdAt) / 86400000) % days.length`
-- **Workout:** `cycleDay = daysSince % 7`. If `cycleDay < days_per_week` → workout day at `workoutDays[cycleDay]`, else → rest.
+- **Workout:** `cycleDay = daysSince % days.length` (the `days[]` array holds all 7 days including rest, so this is `% 7`); the day's own `is_rest` flag decides rest vs workout — do **not** re-derive rest from `days_per_week`.
 
 ### Georgian Food Database
 
@@ -165,7 +169,7 @@ VAPID_PUBLIC_KEY       # web-push
 VAPID_PRIVATE_KEY      # web-push
 RESEND_API_KEY         # weekly report only — missing causes runtime 503
 CRON_SECRET            # Vercel sets automatically; protects /api/cron/daily-email
-ADMIN_SETUP_SECRET     # optional — overrides default "geoai-admin-2026"
+ADMIN_SETUP_SECRET     # required for /api/setup-admin — no fallback; unset = endpoint disabled
 ```
 
 ### Deployment (Vercel)
