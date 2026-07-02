@@ -6,6 +6,29 @@ Web Activity (TWA)** — a thin native wrapper around the same live URL
 Vercel deploy updates the Android app automatically (no re-submission for content
 changes).
 
+## ✅ Signed APK is built and shipped
+
+A signed release APK is already built and committed at `public/app.apk` — the
+`/download` page serves it and `assetlinks.json` carries its real fingerprint, so
+the installed app runs full-screen (no browser bar). Users can install it today
+(after deploy) without Play Store.
+
+- Package: `space.reeducate.trainer`, version 1.0.0 (versionCode 1)
+- Signing cert SHA-256: `81:FC:49:17:3A:01:F2:59:5F:C3:B3:AB:B7:E2:DA:E7:D8:7C:FF:DB:6C:4C:3F:5C:36:C7:C9:67:A2:A0:95:89`
+- **Keystore: `C:\twa-toolchain\build\android.keystore`** (alias `android`, store/key pass `reeducate2026`). **⚠️ BACK THIS UP** — it is intentionally NOT committed. Losing it means future updates can't be signed with the same key, forcing users to uninstall/reinstall. Never commit it to the repo.
+- Toolchain used (local, not committed): `C:\twa-toolchain` (JDK17 + Android SDK 34).
+
+**Rebuild after a version bump** (bump `appVersionCode` in `C:\twa-toolchain\build\twa-manifest.json`):
+```
+cd C:\twa-toolchain\build
+node gen-project.mjs
+cmd /c "call app\gradlew.bat -p app assembleRelease --no-daemon"
+android-sdk\build-tools\34.0.0\zipalign -f -p 4 app\app\build\outputs\apk\release\app-release-unsigned.apk aligned.apk
+android-sdk\build-tools\34.0.0\apksigner sign --ks android.keystore --ks-pass pass:reeducate2026 --key-pass pass:reeducate2026 --out app-release-signed.apk aligned.apk
+copy app-release-signed.apk <repo>\public\app.apk
+```
+Then commit `public/app.apk` and redeploy.
+
 ## What's already done in this repo (PWA / Store-readiness)
 
 - PNG icons: `public/icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png` (regenerate with `node scripts/gen-icons.mjs`)
