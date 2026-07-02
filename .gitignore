@@ -45,3 +45,5 @@ dev-server.log
 scratch/
 
 .vercel
+dev-err.log
+dev-out.log
