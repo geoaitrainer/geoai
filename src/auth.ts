@@ -13,15 +13,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: { email: {}, password: {}, adminOtp: {} },
       async authorize(credentials) {
         if (!credentials?.email) return null
+        const email = String(credentials.email).toLowerCase().trim()
         await connectDB()
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const user = await User.findOne({ email: credentials.email }).lean() as any
+        const user = await User.findOne({ email }).lean() as any
         if (!user) return null
 
         // Admin OTP path
         if (credentials.adminOtp) {
           const record = await AuthToken.findOne({
-            email: credentials.email,
+            email,
             token: credentials.adminOtp,
             type: 'admin_otp',
             used: false,

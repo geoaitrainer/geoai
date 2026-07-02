@@ -1,11 +1,40 @@
 import { auth } from '@/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { openaiClient } from '@/lib/openai/client'
-import { buildWorkoutPlanPrompt } from '@/lib/openai/prompts'
+import {
+  buildWorkoutShellPrompt,
+  buildWorkoutDayPrompt,
+} from '@/lib/openai/prompts'
 import { connectDB } from '@/lib/mongodb/mongoose'
 import { Profile } from '@/lib/mongodb/models/Profile'
 import { WorkoutProgram } from '@/lib/mongodb/models/WorkoutProgram'
 import type { Profile as ProfileType } from '@/types/profile'
+import type { WorkoutDay } from '@/types/workout'
+
+export const maxDuration = 300
+
+const MODEL = 'google/gemini-2.5-flash-lite'
+const SYSTEM = `შენ ხარ ელიტარული Strength & Conditioning კოჩი, NSCA CSCS სერტიფიცირებული. მეთოდოლოგია: COMPOUND-FIRST, PROGRESSIVE OVERLOAD, PERIODIZATION. სტილი: პირდაპირი, პრაქტიკული, მტკიცებულებებზე დაფუძნებული. პასუხობ მხოლოდ ვალიდური JSON ფორმატით ქართულ ენაზე.`
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function jsonCall(prompt: string, maxTokens: number): Promise<any | null> {
+  const completion = await openaiClient.chat.completions.create({
+    model: MODEL,
+    messages: [
+      { role: 'system', content: SYSTEM },
+      { role: 'user', content: prompt },
+    ],
+    response_format: { type: 'json_object' },
+    max_tokens: maxTokens,
+  })
+  const content = completion.choices[0]?.message?.content
+  if (!content || completion.choices[0]?.finish_reason === 'length') return null
+  try {
+    return JSON.parse(content)
+  } catch {
+    return null
+  }
+}
 
 export async function POST(request: NextRequest) {
   const session = await auth()
@@ -15,48 +44,43 @@ export async function POST(request: NextRequest) {
 
   await connectDB()
   const userId = session.user.id
-  const profile = await Profile.findOne({ userId }).lean()
-  if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+  const profileDoc = await Profile.findOne({ userId }).lean()
+  if (!profileDoc) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+  const profile = profileDoc as unknown as ProfileType
 
   try {
-    const prompt = buildWorkoutPlanPrompt(profile as unknown as ProfileType, type)
-    const completion = await openaiClient.chat.completions.create({
-      model: 'google/gemini-2.5-flash-lite',
-      messages: [
-        {
-          role: 'system',
-          content: `შენ ხარ ელიტარული Strength & Conditioning კოჩი, NSCA CSCS სერტიფიცირებული, 10+ წლის გამოცდილებით. შენი მეთოდოლოგია მკაცრად მტკიცებულებებზეა დაფუძნებული სამი ძირითადი პრინციპით:
-
-1. COMPOUND-FIRST: მრავალსახსრიანი, მაღალენერგეტიკული სავარჯიშოები (Squat, Deadlift, Press) — სესიის დასაწყისში, ნევროლოგიური კაპაციტეტის პიკზე.
-2. PROGRESSIVE OVERLOAD: მკაფიო პროგრესია — დატვირთვა, მოცულობა, სიმჭიდროვე ან RPE/RIR ცვლადებში.
-3. PERIODIZATION: ლოგიკური ფაზები — Accumulation (მოცულობა), Intensification (ინტენსივობა), Deload (გამოჯანმრთელება).
-
-კომუნიკაციის სტილი: პირდაპირი, ობიექტური, პრაქტიკული. არანაირი generic motivation ან gym-bro ფლუდი. ფოკუსი: ბიომექანიკა, ვოლუმის მენეჯმენტი, დაღლილობის ტრეკინგი, ტრავმის პრევენცია.
-
-ყოველ სავარჯიშოზე მიეთითება: Sets, Reps, RPE (1-10), RIR (Reps in Reserve), Rest Periods.
-ყოველთვის პასუხობ მხოლოდ JSON ფორმატით ქართულ ენაზე.`,
-        },
-        { role: 'user', content: prompt },
-      ],
-      response_format: { type: 'json_object' },
-      max_tokens: 8000,
-    })
-
-    const content = completion.choices[0]?.message?.content
-    if (!content) return NextResponse.json({ error: 'AI error' }, { status: 500 })
-
-    let programData
-    try {
-      programData = JSON.parse(content)
-    } catch {
+    // 1. Program shell: metadata + 7 day headers, no exercises.
+    const shell = await jsonCall(buildWorkoutShellPrompt(profile, type), 3000)
+    if (!shell?.days?.length) {
       return NextResponse.json({ error: 'AI returned invalid format' }, { status: 502 })
+    }
+
+    // 2. Fill each workout day's exercises in parallel (rest days stay empty).
+    const days: WorkoutDay[] = shell.days
+    await Promise.all(
+      days.map(async (day) => {
+        if (day.is_rest) {
+          day.exercises = day.exercises ?? []
+          return
+        }
+        const prompt = buildWorkoutDayPrompt(profile, type, day.day_name, day.muscle_groups ?? [])
+        let res = await jsonCall(prompt, 4000)
+        if (!res?.exercises) res = await jsonCall(prompt, 4000) // one retry
+        day.exercises = Array.isArray(res?.exercises) ? res.exercises : []
+      })
+    )
+
+    // Fail if no workout day got exercises — better a clean error than an empty program.
+    const hasExercises = days.some(d => !d.is_rest && (d.exercises?.length ?? 0) > 0)
+    if (!hasExercises) {
+      return NextResponse.json({ error: 'AI generation incomplete' }, { status: 502 })
     }
 
     const saved = await WorkoutProgram.create({
       userId, type,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       level: (profile as any).experience,
-      content: programData,
+      content: shell,
       is_active: true,
     })
     await WorkoutProgram.updateMany({ userId, type, _id: { $ne: saved._id } }, { is_active: false })
