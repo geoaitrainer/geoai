@@ -45,8 +45,11 @@ export default async function DashboardPage() {
   const caloriePct = Math.min((todayCalories / (p.calorie_goal || 1)) * 100, 100)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const progressArr = progress as any[]
-  const latestWeight = progressArr[progressArr.length - 1]?.weight_kg || p.weight_kg
-  const weightDiff = latestWeight - p.weight_kg
+  // progressArr is sorted oldest→newest; compare latest against the first tracked
+  // entry (baseline), not the profile weight which may have been edited over time.
+  const baselineWeight = progressArr[0]?.weight_kg ?? p.weight_kg
+  const latestWeight = progressArr[progressArr.length - 1]?.weight_kg ?? p.weight_kg
+  const weightDiff = latestWeight - baselineWeight
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const todayWaterMl = (waterEntries as any[]).reduce((s, e) => s + (e.amount_ml || 0), 0)
 

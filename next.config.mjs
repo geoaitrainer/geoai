@@ -6,7 +6,7 @@ const nextConfig = {
     ],
   },
   experimental: {
-    serverComponentsExternalPackages: ['openai', 'nodemailer'],
+    serverComponentsExternalPackages: ['openai', 'nodemailer', 'web-push'],
     instrumentationHook: true,
   },
 }

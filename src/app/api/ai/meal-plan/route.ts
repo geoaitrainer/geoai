@@ -81,6 +81,13 @@ export async function POST(request: NextRequest) {
   if (!profileDoc) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
   const profile = profileDoc as unknown as ProfileType
 
+  // Cooldown: reject rapid re-generation (double-click / spam) of the same type.
+  const lastPlan = await MealPlan.findOne({ userId, type }).sort({ createdAt: -1 }).select('createdAt').lean()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (lastPlan && Date.now() - new Date((lastPlan as any).createdAt).getTime() < 20000) {
+    return NextResponse.json({ error: 'ძალიან ხშირი მოთხოვნა — სცადე 20 წამში' }, { status: 429 })
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const w = workout as any
   const workoutRoutine = w?.content

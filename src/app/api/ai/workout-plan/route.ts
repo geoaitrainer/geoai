@@ -48,6 +48,13 @@ export async function POST(request: NextRequest) {
   if (!profileDoc) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
   const profile = profileDoc as unknown as ProfileType
 
+  // Cooldown: reject rapid re-generation (double-click / spam) of the same type.
+  const lastProgram = await WorkoutProgram.findOne({ userId, type }).sort({ createdAt: -1 }).select('createdAt').lean()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (lastProgram && Date.now() - new Date((lastProgram as any).createdAt).getTime() < 20000) {
+    return NextResponse.json({ error: 'ძალიან ხშირი მოთხოვნა — სცადე 20 წამში' }, { status: 429 })
+  }
+
   try {
     // 1. Program shell: metadata + 7 day headers, no exercises.
     const shell = await jsonCall(buildWorkoutShellPrompt(profile, type), 3000)

@@ -25,6 +25,7 @@
     "@types/nodemailer": "^8.0.1",
     "@types/web-push": "^3.6.4",
     "ai": "^6.0.196",
+    "asn1.js": "^5.4.1",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "framer-motion": "^12.42.0",

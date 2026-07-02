@@ -3,9 +3,14 @@ import { connectDB } from '@/lib/mongodb/mongoose'
 import { Profile } from '@/lib/mongodb/models/Profile'
 import { User } from '@/lib/mongodb/models/User'
 
-const SETUP_SECRET = process.env.ADMIN_SETUP_SECRET || 'geoai-admin-2026'
+const SETUP_SECRET = process.env.ADMIN_SETUP_SECRET
 
 export async function POST(request: NextRequest) {
+  // No hardcoded fallback: if the secret isn't configured, the endpoint is off.
+  if (!SETUP_SECRET) {
+    return NextResponse.json({ error: 'Setup disabled' }, { status: 403 })
+  }
+
   const { email, secret } = await request.json()
 
   if (secret !== SETUP_SECRET) {
