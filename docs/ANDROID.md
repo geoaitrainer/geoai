@@ -57,6 +57,21 @@ bubblewrap build
 4. Fill listing (Georgian): title, description, screenshots (phone), privacy
    policy URL, data-safety form → submit for review
 
+## Distribution without Play Console (free)
+
+The `/download` page (`src/app/download/page.tsx`) is a public install hub — a QR
+code to open the site on a phone, "Add to Home Screen" (PWA) instructions, and an
+APK download button.
+
+- **PWA (zero build):** after deploy, users open the site → Chrome menu → "Add to
+  Home Screen". Full-screen, icon, offline — no APK, no store.
+- **APK sideload:** build a **Signed APK** (not AAB) in PWABuilder → drop it at
+  `public/app.apk` → redeploy. The `/download` button then serves it. Users enable
+  "install from unknown sources". Share the link/QR directly (Telegram, etc.).
+
+`public/app.apk` is intentionally absent until you build it — the download button
+404s until then.
+
 ## Notes
 - **Package name** `space.reeducate.trainer` is used in `assetlinks.json`; keep it identical everywhere.
 - **Push**: `web-push` already works inside the TWA on Android 13+ (asks notification permission). No FCM change needed for basic push.
