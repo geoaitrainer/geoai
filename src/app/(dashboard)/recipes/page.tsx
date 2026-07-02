@@ -121,8 +121,8 @@ export default function RecipesPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex gap-2 flex-wrap">
-                  <Badge variant="protein">ც: {recipe.nutrition_per_serving.protein_g}გ</Badge>
-                  <Badge variant="fat">ც: {recipe.nutrition_per_serving.fat_g}გ</Badge>
+                  <Badge variant="protein">ცილა: {recipe.nutrition_per_serving.protein_g}გ</Badge>
+                  <Badge variant="fat">ცხიმი: {recipe.nutrition_per_serving.fat_g}გ</Badge>
                   <Badge variant="carbs">ნ: {recipe.nutrition_per_serving.carbs_g}გ</Badge>
                 </div>
               </CardContent>
