@@ -30,7 +30,12 @@ npx vercel env add <NAME> production --token <TOKEN>   # add env var non-interac
 
 **GitHub:** `https://github.com/geoaitrainer/geoai`
 
-**PWA:** `public/manifest.json` + `public/icon.svg` + `public/sw.js` (service worker for push notifications). Targets standalone mobile display.
+**PWA & Android (TWA):** The site doubles as an installable app — no separate mobile codebase.
+- `public/manifest.json` (PNG icons 192/512/maskable via `scripts/gen-icons.mjs` from the SVGs), `public/sw.js` (v2: offline shell + `offline.html` + cache-first static + web push), `public/icon*.svg/png`, `public/apple-touch-icon.png`.
+- Service worker registers globally in `InstallBanner` (not just on the dashboard).
+- `next.config.mjs` `headers()` serves `/.well-known/assetlinks.json` as `application/json` and sets `Service-Worker-Allowed: /`. `src/middleware.ts` matcher excludes `.well-known`, `manifest.json`, `sw.js` from auth.
+- **`/download`** (`src/app/download/page.tsx`, public) — install hub: server-rendered QR (via `qrcode`), Add-to-Home-Screen steps, and an APK button serving `public/app.apk`.
+- **Android app = TWA** wrapping `https://geotraener.vercel.app`. A signed APK is committed at `public/app.apk` (package `space.reeducate.trainer`); `public/.well-known/assetlinks.json` carries its signing SHA-256 so it runs full-screen. **The signing keystore is NOT in the repo** — backed up at `~/Desktop` and `~/Documents\AI-Trainer-Android-KEYSTORE-BACKUP\`. Full build/rebuild + Play Store steps: `docs/ANDROID.md`.
 
 ### Auth — NextAuth v5 (JWT, Credentials-only)
 
